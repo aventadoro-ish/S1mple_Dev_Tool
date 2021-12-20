@@ -18,7 +18,7 @@ LAYOUT_TAB_HARD_EMULATOR = [
 LAYOUT_TAB_ASSEMBLER = [
     [sg.Text('New file', key='-asm_filename-'),
      sg.FileBrowse('Open', key='-asm_fb-', target='-asm_fb-', change_submits=True),
-     sg.Button('Save', key='-asm_save_file-')],
+     sg.Button('Save', key='-asm_save_file_event-')],
     [sg.Multiline(size=(44, 20), autoscroll=True, enable_events=True,
                   key='-asm_inp-', enter_submits=True),
      sg.Multiline(size=(44, 20), key='-asm_out-', disabled=True, no_scrollbar=True)
@@ -52,8 +52,6 @@ def open_window():
 
 
 def event_loop(window: sg.Window):
-    last_asm_upd = time.time()
-
     # TODO: asyncio investigation
     while True:
         event, values = window.read()
@@ -62,32 +60,13 @@ def event_loop(window: sg.Window):
             break
 
         elif event == '-asm_inp-' + "_Enter":
-            # print(f'{event=}, {values=}')
-            out_box: sg.Multiline = window['-asm_out-']
-            text: str = values['-asm_inp-']
-
-            asm_change_event(text.split('\n'))
-
-            out_box.Update('')
-            out_box.print(text)
+            asm_change_event(window, values)
 
         elif event == '-asm_fb-':
-            filepath: str = values['-asm_fb-']
-            filename: str = filepath.split('/')[-1]
+            asm_file_choice_event(window, values)
 
-            filename_text: sg.Text = window['-asm_filename-']
-            filename_text.update(value=filename)
-
-        elif event == '-asm_save_file-':
-            print('Save press!')
+        elif event == '-asm_save_file_event-':
+            asm_save_file_event(window, values)
 
         elif event != '-asm_inp-':
             print(f'{event=}, {values=}')
-
-
-        # TODO: not quite working
-        cur_time = time.time()
-        if cur_time - last_asm_upd > 3:
-            asm_change_event(values['-asm_inp-'].split('\n'))
-            last_asm_upd = cur_time
-
