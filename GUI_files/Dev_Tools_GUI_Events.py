@@ -1,27 +1,24 @@
-import difflib
 import PySimpleGUI as sg
 from queue import Queue
+from Dev_Tools_Commons import *
+from Dev_Tools_Commons import *
+
+
+def close_main_window_event(window: sg.Window, values: dict, q: Queue) -> None:
+    print(f'[View]: Closing Main Window!')
+    q.put(QueueEntry(active_tab=None,
+                     element=None,
+                     data='Exit'))
 
 
 def asm_change_event(window: sg.Window, values: dict, q: Queue) -> None:
-    if not hasattr(asm_change_event, 'text'):
-        asm_change_event.text = ''
-
-    if not hasattr(asm_change_event, 'dif'):
-        # TODO: linejuck = method that returns if a line is ignorable
-        d = difflib.Differ(linejunk=bool)
-
     new_text: str = values['-asm_inp-']
 
-    for line in d.compare(asm_change_event.text.split('\n'), new_text.split('\n')):
-        if not line.startswith('? '):   # filters out changes inside lines
-            print(line)
+    qe = QueueEntry(active_tab=Tabs.ASSEMBLER,
+                    element=AsmElements.INP_MULTILINE,
+                    data=new_text)
 
-    out_box: sg.Multiline = window['-asm_out-']
-    out_box.Update('')
-    out_box.print(new_text)
-
-    asm_change_event.text = new_text
+    q.put(qe)
 
 
 def asm_save_file_event(window: sg.Window, values: dict, q: Queue) -> None:
