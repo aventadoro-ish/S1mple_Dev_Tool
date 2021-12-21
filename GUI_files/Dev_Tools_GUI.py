@@ -1,77 +1,7 @@
-from GUI_files.Dev_Tools_GUI_Events import *
+from GUI_files.Dev_Tools_GUI_Elements import *
 from Dev_Tools_Commons import *
 import PySimpleGUI as sg
 from queue import Queue
-
-
-LAYOUT_TAB_MICROCODE = [
-    [sg.Text(Tabs.MICROCODE), sg.FileBrowse()]
-]
-
-TABLE = [['Acc', 0], ['R', 0], ['IR', 0], ['PCL', 0], ['PCH', 0], ['PC', 0],
-         ['MAL', 0], ['MAH', 0], ['MAR', 0]]
-
-SOFT_EMU_COL_REGISTERS = [
-    [sg.Text('Registers')],
-    [sg.Table(values=TABLE[:][:], headings=['register', 'value'],
-              auto_size_columns=False, display_row_numbers=True, justification='right',
-              key='-TABLE-', size=(48, 16), hide_vertical_scroll=True)],
-]
-
-SOFT_EMU_COL_MEMORY = [
-    [sg.Text('Memory:', key=SEmuElements.MEM_LOCATION)],
-    [sg.Multiline('MEMORY', key=SEmuElements.MEM_TABLE, size=(48, 11))],
-    [sg.Multiline('GPIO', key=SEmuElements.GPIO_TABLE, size=(48, 5))]
-]
-
-LAYOUT_TAB_SOFT_EMULATOR = [
-    # Tools
-    [sg.Text(Tabs.SOFT_EMU),
-     sg.Button('Asm', key=SEmuElements.LOAD_ASM_PROG),
-     sg.FileBrowse('Open', key=SEmuElements.FB, target=SEmuElements.FB, change_submits=True),
-     sg.Text('Asm', key=SEmuElements.FILENAME),
-     sg.Button('Profiler', key=SEmuElements.PROFILER)],
-
-    [sg.Column(SOFT_EMU_COL_REGISTERS, size=(250, 320)),
-     sg.Column(SOFT_EMU_COL_MEMORY, justification='centertop', size=(370, 320))]
-]
-
-LAYOUT_TAB_HARD_EMULATOR = [
-    [sg.Text(Tabs.HARD_EMU)]
-]
-
-LAYOUT_TAB_ASSEMBLER = [
-    [sg.Text('New file', key=AsmElements.FILENAME),
-     sg.FileBrowse('Open', key=AsmElements.FB, target=AsmElements.FB, change_submits=True),
-     sg.Button('Save', key=AsmElements.SAVE_BTN)],
-    [sg.Multiline(size=(44, 20), autoscroll=True, enable_events=True,
-                  key=AsmElements.INP_MULTILINE, enter_submits=True),
-     sg.Multiline(size=(44, 20), key=AsmElements.OUT_MULTILINE, disabled=True, no_scrollbar=True)
-     ]
-]
-
-LAYOUT_TAB_EEPROM_PROGRAMMER = [
-    [sg.Text('Arduino EEPROM Programmer')]
-]
-
-LAYOUT_TAB_GROUP = [
-    [sg.TabGroup(
-        [
-            [sg.Tab(Tabs.ASSEMBLER, LAYOUT_TAB_ASSEMBLER, title_color='Red', border_width=10,
-                    background_color='Lightgray', key=Tabs.ASSEMBLER.value),
-             sg.Tab(Tabs.SOFT_EMU, LAYOUT_TAB_SOFT_EMULATOR, title_color='Blue',
-                    background_color='Lightgray'),
-             sg.Tab(Tabs.HARD_EMU, LAYOUT_TAB_HARD_EMULATOR, title_color='Black',
-                    background_color='Lightgray'),
-             sg.Tab(Tabs.MICROCODE, LAYOUT_TAB_MICROCODE, title_color='Black',
-                    background_color='Lightgray'),
-             sg.Tab(Tabs.EEPROM, LAYOUT_TAB_EEPROM_PROGRAMMER)
-             ]
-        ], key='-tab_grp-', tab_location='centertop', title_color='Black', tab_background_color='White',
-        selected_title_color='Black', selected_background_color='Gray',
-        border_width=0)
-    ]
-]
 
 
 def open_window() -> sg.Window:
@@ -125,5 +55,63 @@ def event_loop_tab_soft_emu(window: sg.Window, values, event, q: Queue):
         soft_emu_profiler_event(window, values, q)
     else:
         print(f'{event=}, {values=}')
+
+
+def close_main_window_event(window: sg.Window, values: dict, q: Queue) -> None:
+    print(f'[View]: Closing Main Window!')
+    q.put(QueueEntry(active_tab=None,
+                     element=None,
+                     data='Exit'))
+
+
+def asm_change_event(window: sg.Window, values: dict, q: Queue) -> None:
+    new_text: str = values['-asm_inp-']
+
+    qe = QueueEntry(active_tab=Tabs.ASSEMBLER,
+                    element=AsmElements.INP_MULTILINE,
+                    data=new_text)
+
+    q.put(qe)
+
+
+def asm_save_file_event(window: sg.Window, values: dict, q: Queue) -> None:
+    print(f'{values=}, {type(values)=}')
+    print('Save press!')
+
+
+def asm_file_choice_event(window: sg.Window, values: dict, q: Queue) -> None:
+    filepath: str = values['-asm_fb-']
+    filename: str = filepath.split('/')[-1]
+    filename_text: sg.Text = window['-asm_filename-']
+    filename_text.update(value=filename)
+
+
+# SOFT EMULATOR TAB
+def soft_emu_file_choice_event(window: sg.Window, values: dict, q: Queue) -> None:
+    filepath: str = values['-s_emu_fb-']
+    filename: str = filepath.split('/')[-1]
+    filename_text: sg.Text = window['-s_emu_filename-']
+    filename_text.update(value=filename)
+
+
+def soft_emu_load_event(window: sg.Window, values: dict, q: Queue) -> None:
+    window['-s_emu_filename-'].update(value='Asm')
+
+
+def soft_emu_profiler_event(window: sg.Window, values: dict, q: Queue) -> None:
+    window.disable()    # TODO window.disable/enable is a temp workaround
+    profiler_window = sg.Window('Profiler WIP',
+                                [[sg.Button('Close')]],
+                                size=(400, 100))
+
+    while True:
+        event, values = profiler_window.read()
+
+        if event in (None, 'Exit', 'Cancel', 'Close'):
+            window.enable()
+            break
+        else:
+            print(event, values)
+
 
 

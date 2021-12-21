@@ -1,8 +1,11 @@
-import PySimpleGUI as sg
-from Dev_Tools_Commons import *
+from GUI_files.Dev_Tools_GUI_Elements import Tabs, AsmElements, SEmuElements
 from GUI_files.Dev_Tools_GUI import open_window, event_loop
+
 from Models.Assembler import Assembler
 
+from Dev_Tools_Commons import QueueEntry
+
+import PySimpleGUI as sg
 from queue import Queue
 from threading import Thread
 
