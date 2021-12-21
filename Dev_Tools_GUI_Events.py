@@ -28,8 +28,31 @@ def asm_save_file_event(window: sg.Window, values: dict) -> None:
     print('Save press!')
 
 
-def asm_file_choice_event(window, values):
+def asm_file_choice_event(window: sg.Window, values: dict) -> None:
     filepath: str = values['-asm_fb-']
     filename: str = filepath.split('/')[-1]
     filename_text: sg.Text = window['-asm_filename-']
     filename_text.update(value=filename)
+
+
+# SOFT EMULATOR TAB
+def soft_emu_file_choice_event(window: sg.Window, values: dict) -> None:
+    filepath: str = values['-s_emu_fb-']
+    filename: str = filepath.split('/')[-1]
+    filename_text: sg.Text = window['-s_emu_filename-']
+    filename_text.update(value=filename)
+
+
+def soft_emu_load_event(window: sg.Window, values: dict) -> None:
+    window['-s_emu_filename-'].update(value='Asm')
+
+
+def soft_emu_profiler_event(window: sg.Window, values: dict) -> None:
+    profiler_window = sg.Window('Hello', [[]])
+
+    while True:
+        event, values = profiler_window.read()
+
+        if event in (None, 'Exit', 'Cancel'):
+            break
+
