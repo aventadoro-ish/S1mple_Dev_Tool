@@ -37,11 +37,16 @@ class MicrocodeElements(EnumStr):
     SAVE_AS = '-mcc_save_as-'
     IMPORT = '-mcc_import-'
     EXPORT = '-mcc_export-'
+    FLAG_ZERO = '-mcc_zero-'
+    FLAG_NEG = '-mcc_neg-'
+    FLAG_CARRY = '-mcc_carry-'
+    ONE_STEP = '-mcc_step-'
+    CONT_STEP = '-mcc_cont-'
+    SPEED = '-mcc_speed-'
 
 
 LAYOUT_TAB_MICROCODE = [
-    [sg.Text(Tabs.MICROCODE),
-     sg.Button('Load Default', key=MicrocodeElements.LOAD_DEF_MICROCODE),
+    [sg.Button('Load Default', key=MicrocodeElements.LOAD_DEF_MICROCODE),
      sg.FileBrowse('Open', key=MicrocodeElements.OPEN_MICROCODE,
                    target=MicrocodeElements.OPEN_MICROCODE, change_submits=True),
      sg.Text('Default', key=MicrocodeElements.FILENAME),
@@ -52,20 +57,24 @@ LAYOUT_TAB_MICROCODE = [
                    target=MicrocodeElements.IMPORT, change_submits=True),
      sg.FileBrowse('Export .hex', key=MicrocodeElements.EXPORT,
                    target=MicrocodeElements.EXPORT, change_submits=True)],
-    [sg.Column([[sg.Table(values=[['', '']], headings=['#', 'name'], col_widths=(4, 8),
+    [sg.Column([[sg.Table(values=[['', '']], headings=['#', 'name'], col_widths=[4, 8],
                           auto_size_columns=False, size=(30, 18))]]),
      sg.Column([[sg.Text('Flags')],
-                [sg.Checkbox('Zero')],
-                [sg.Checkbox('Negative')],
-                [sg.Checkbox('Carry')],
+                [sg.Checkbox('Zero', change_submits=True,
+                             key=MicrocodeElements.FLAG_ZERO)],
+                [sg.Checkbox('Negative', change_submits=True,
+                             key=MicrocodeElements.FLAG_NEG)],
+                [sg.Checkbox('Carry', change_submits=True,
+                             key=MicrocodeElements.FLAG_CARRY)],
                 [sg.Table(values=[['', '', '']], headings=['origin', 'dst', 'special'],
-                          col_widths=(5, 5, 5), auto_size_columns=False, size=(11, 11))]]),
+                          col_widths=[5, 5, 5], auto_size_columns=False,
+                          size=(11, 11))]]),
      sg.Column([[sg.Canvas(size=(320, 280))],
-                [sg.Button('1 step'),
-                 sg.Button('cont.'),
-                 sg.Input(size=(10, 1))]])]
+                [sg.Button('1 step', key=MicrocodeElements.ONE_STEP),
+                 sg.Button('cont.', key=MicrocodeElements.CONT_STEP),
+                 sg.Input(key=MicrocodeElements.SPEED, change_submits=True,
+                          size=(10, 1))]])]
 ]
-
 
 TABLE = [['Acc', 0], ['R', 0], ['IR', 0], ['PCL', 0], ['PCH', 0], ['PC', 0],
          ['MAL', 0], ['MAH', 0], ['MAR', 0]]

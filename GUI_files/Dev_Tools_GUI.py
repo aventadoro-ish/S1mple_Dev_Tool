@@ -27,6 +27,9 @@ def event_loop(window: sg.Window, q: Queue) -> None:
         elif tab == Tabs.SOFT_EMU:
             event_loop_tab_soft_emu(window, values, event, q)
 
+        elif tab == Tabs.MICROCODE:
+            event_loop_tab_microcode(window, values, event, q)
+
         else:
             print('Undefined tab event!')
 
@@ -55,6 +58,10 @@ def event_loop_tab_soft_emu(window: sg.Window, values, event, q: Queue):
         soft_emu_profiler_event(window, values, q)
     else:
         print(f'{event=}, {values=}')
+
+
+def event_loop_tab_microcode(window: sg.Window, values, event, q: Queue):
+    print(f'MICROCODE EVENT: {event}')
 
 
 def close_main_window_event(window: sg.Window, values: dict, q: Queue) -> None:
