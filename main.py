@@ -24,7 +24,7 @@ def controller(window: sg.Window, q: Queue):
             if qe.element == AsmElements.INP_MULTILINE:
                 asm.compare_and_update(qe.data)
 
-                out_box: sg.Multiline = window['-asm_out-']
+                out_box: sg.Multiline = window[AsmElements.OUT_MULTILINE]
                 out_box.Update('')
                 out_box.print(qe.data)
 

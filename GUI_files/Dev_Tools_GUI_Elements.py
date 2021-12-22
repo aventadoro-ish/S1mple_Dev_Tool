@@ -29,9 +29,43 @@ class SEmuElements(EnumStr):
     SCHEMATIC = '-s_emu_schematic-'
 
 
+class MicrocodeElements(EnumStr):
+    LOAD_DEF_MICROCODE = '-mcc_ld_def-'
+    OPEN_MICROCODE = '-mcc_fb-'
+    FILENAME = '-mcc_filename-'
+    SAVE = '-mcc_save-'
+    SAVE_AS = '-mcc_save_as-'
+    IMPORT = '-mcc_import-'
+    EXPORT = '-mcc_export-'
+
+
 LAYOUT_TAB_MICROCODE = [
-    [sg.Text(Tabs.MICROCODE), sg.FileBrowse()]
+    [sg.Text(Tabs.MICROCODE),
+     sg.Button('Load Default', key=MicrocodeElements.LOAD_DEF_MICROCODE),
+     sg.FileBrowse('Open', key=MicrocodeElements.OPEN_MICROCODE,
+                   target=MicrocodeElements.OPEN_MICROCODE, change_submits=True),
+     sg.Text('Default', key=MicrocodeElements.FILENAME),
+     sg.Button('Save', key=MicrocodeElements.SAVE),
+     sg.FileBrowse('Save as', key=MicrocodeElements.SAVE_AS,
+                   target=MicrocodeElements.SAVE_AS, change_submits=True),
+     sg.FileBrowse('Import .csv', key=MicrocodeElements.IMPORT,
+                   target=MicrocodeElements.IMPORT, change_submits=True),
+     sg.FileBrowse('Export .hex', key=MicrocodeElements.EXPORT,
+                   target=MicrocodeElements.EXPORT, change_submits=True)],
+    [sg.Column([[sg.Table(values=[['', '']], headings=['#', 'name'], col_widths=(4, 8),
+                          auto_size_columns=False, size=(30, 18))]]),
+     sg.Column([[sg.Text('Flags')],
+                [sg.Checkbox('Zero')],
+                [sg.Checkbox('Negative')],
+                [sg.Checkbox('Carry')],
+                [sg.Table(values=[['', '', '']], headings=['origin', 'dst', 'special'],
+                          col_widths=(5, 5, 5), auto_size_columns=False, size=(11, 11))]]),
+     sg.Column([[sg.Canvas(size=(320, 280))],
+                [sg.Button('1 step'),
+                 sg.Button('cont.'),
+                 sg.Input(size=(10, 1))]])]
 ]
+
 
 TABLE = [['Acc', 0], ['R', 0], ['IR', 0], ['PCL', 0], ['PCH', 0], ['PC', 0],
          ['MAL', 0], ['MAH', 0], ['MAR', 0]]
