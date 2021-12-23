@@ -61,6 +61,8 @@ def event_loop_tab_soft_emu(window: sg.Window, values, event, q: Queue):
 
 
 def event_loop_tab_microcode(window: sg.Window, values, event, q: Queue):
+    if event == MicrocodeElements.IMPORT:
+        pass
     print(f'MICROCODE EVENT: {event}')
 
 

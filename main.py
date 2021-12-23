@@ -72,6 +72,10 @@ def soft_emu_actions(emu: None, qe: QueueEntry, window: sg.Window):
         print(f'[Controller] Unknown {Tabs.SOFT_EMU} action: {qe=}')
 
 
+def microcode_actions(microcode: None, qe: QueueEntry, window: sg.Window):
+    pass
+
+
 def main():
     q = Queue()
     window = open_window()
