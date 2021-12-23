@@ -72,53 +72,39 @@ def close_main_window_event(window: sg.Window, values: dict, q: Queue) -> None:
 
 
 def asm_change_event(window: sg.Window, values: dict, q: Queue) -> None:
-    new_text: str = values['-asm_inp-']
+    new_text: str = values[AsmElements.INP_MULTILINE]
 
-    qe = QueueEntry(active_tab=Tabs.ASSEMBLER,
-                    element=AsmElements.INP_MULTILINE,
-                    data=new_text)
-
-    q.put(qe)
+    q.put(QueueEntry(active_tab=Tabs.ASSEMBLER,
+                     element=AsmElements.INP_MULTILINE,
+                     data=new_text))
 
 
 def asm_save_file_event(window: sg.Window, values: dict, q: Queue) -> None:
-    print(f'{values=}, {type(values)=}')
-    print('Save press!')
+    q.put(QueueEntry(active_tab=Tabs.ASSEMBLER,
+                     element=AsmElements.SAVE_BTN,
+                     data=values[AsmElements.FB]))
 
 
 def asm_file_choice_event(window: sg.Window, values: dict, q: Queue) -> None:
-    filepath: str = values['-asm_fb-']
-    filename: str = filepath.split('/')[-1]
-    filename_text: sg.Text = window['-asm_filename-']
-    filename_text.update(value=filename)
+    q.put((QueueEntry(active_tab=Tabs.ASSEMBLER,
+                      element=AsmElements.FB,
+                      data=values[AsmElements.FB])))
 
 
 # SOFT EMULATOR TAB
 def soft_emu_file_choice_event(window: sg.Window, values: dict, q: Queue) -> None:
-    filepath: str = values['-s_emu_fb-']
-    filename: str = filepath.split('/')[-1]
-    filename_text: sg.Text = window['-s_emu_filename-']
-    filename_text.update(value=filename)
+    q.put((QueueEntry(active_tab=Tabs.SOFT_EMU,
+                      element=SEmuElements.FB,
+                      data=values[SEmuElements.FB])))
 
 
 def soft_emu_load_event(window: sg.Window, values: dict, q: Queue) -> None:
-    window['-s_emu_filename-'].update(value='Asm')
+    q.put(QueueEntry(active_tab=Tabs.SOFT_EMU,
+                     element=SEmuElements.LOAD_ASM_PROG,
+                     data='Asm'))
 
 
 def soft_emu_profiler_event(window: sg.Window, values: dict, q: Queue) -> None:
-    window.disable()    # TODO window.disable/enable is a temp workaround
-    profiler_window = sg.Window('Profiler WIP',
-                                [[sg.Button('Close')]],
-                                size=(400, 100))
-
-    while True:
-        event, values = profiler_window.read()
-
-        if event in (None, 'Exit', 'Cancel', 'Close'):
-            window.enable()
-            break
-        else:
-            print(event, values)
-
+    sg.PopupOK('Profiler WIP')
 
 

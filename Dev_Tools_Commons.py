@@ -12,5 +12,3 @@ class QueueEntry:
 class EnumStr(str, Enum):   # TODO: how does adding 'str' fixes my problem?
     def __str__(self):
         return self.value
-
-
