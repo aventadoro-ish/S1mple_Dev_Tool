@@ -31,44 +31,47 @@ class SEmuElements(EnumStr):
 
 class MicrocodeElements(EnumStr):
     LOAD_DEF_MICROCODE = '-mcc_ld_def-'
-    OPEN_MICROCODE = '-mcc_fb-'
-    FILENAME = '-mcc_filename-'
+    OPEN_MICROCODE = '-mcc_open-'
+    NEW_MICROCODE = '-mcc_new-'
     SAVE = '-mcc_save-'
     SAVE_AS = '-mcc_save_as-'
     IMPORT = '-mcc_import-'
     EXPORT = '-mcc_export-'
-    FLAG_ZERO = '-mcc_zero-'
-    FLAG_NEG = '-mcc_neg-'
-    FLAG_CARRY = '-mcc_carry-'
+    FLAGS = '-mcc_flags-'
     ONE_STEP = '-mcc_step-'
     CONT_STEP = '-mcc_cont-'
     SPEED = '-mcc_speed-'
+    DATA_MENU = '-mcc_data-'
+
+
+MICROCODE_UPPER_CONTROL_PANEL = [
+    sg.Button('Load Default', key=MicrocodeElements.LOAD_DEF_MICROCODE),
+    sg.FileBrowse('Open', key=MicrocodeElements.OPEN_MICROCODE,
+                  target=MicrocodeElements.OPEN_MICROCODE, change_submits=True),
+    sg.Button('Save', key=MicrocodeElements.SAVE),
+    sg.FolderBrowse('Save as', key=MicrocodeElements.SAVE_AS,
+                    target=MicrocodeElements.SAVE_AS, change_submits=True),
+    sg.FolderBrowse('New', key=MicrocodeElements.NEW_MICROCODE,
+                    target=MicrocodeElements.NEW_MICROCODE, change_submits=True),
+    sg.Button('Data', key=MicrocodeElements.DATA_MENU),
+
+]
+
+MICROCODE_CENTRAL_COLUMN = [
+    [sg.Multiline('Info:', disabled=True, size=(21, 5), no_scrollbar=True)],
+    [sg.Input(size=(21, 1), key=MicrocodeElements.FLAGS, tooltip='flags',
+              change_submits=True)],
+    [sg.Table(values=[['', '', '']], headings=['origin', 'dst', 'special'],
+              col_widths=[5, 5, 5], auto_size_columns=False,
+              size=(11, 11))]
+]
 
 
 LAYOUT_TAB_MICROCODE = [
-    [sg.Button('Load Default', key=MicrocodeElements.LOAD_DEF_MICROCODE),
-     sg.FileBrowse('Open', key=MicrocodeElements.OPEN_MICROCODE,
-                   target=MicrocodeElements.OPEN_MICROCODE, change_submits=True),
-     sg.Text('Default', key=MicrocodeElements.FILENAME),
-     sg.Button('Save', key=MicrocodeElements.SAVE),
-     sg.FileBrowse('Save as', key=MicrocodeElements.SAVE_AS,
-                   target=MicrocodeElements.SAVE_AS, change_submits=True),
-     sg.FileBrowse('Import .csv', key=MicrocodeElements.IMPORT,
-                   target=MicrocodeElements.IMPORT, change_submits=True),
-     sg.FileBrowse('Export .hex', key=MicrocodeElements.EXPORT,
-                   target=MicrocodeElements.EXPORT, change_submits=True)],
+    MICROCODE_UPPER_CONTROL_PANEL,
     [sg.Column([[sg.Table(values=[['', '']], headings=['#', 'name'], col_widths=[4, 8],
                           auto_size_columns=False, size=(30, 18))]]),
-     sg.Column([[sg.Text('Flags')],
-                [sg.Checkbox('Zero', change_submits=True,
-                             key=MicrocodeElements.FLAG_ZERO)],
-                [sg.Checkbox('Negative', change_submits=True,
-                             key=MicrocodeElements.FLAG_NEG)],
-                [sg.Checkbox('Carry', change_submits=True,
-                             key=MicrocodeElements.FLAG_CARRY)],
-                [sg.Table(values=[['', '', '']], headings=['origin', 'dst', 'special'],
-                          col_widths=[5, 5, 5], auto_size_columns=False,
-                          size=(11, 11))]]),
+     sg.Column(MICROCODE_CENTRAL_COLUMN),
      sg.Column([[sg.Canvas(size=(320, 280))],
                 [sg.Button('1 step', key=MicrocodeElements.ONE_STEP),
                  sg.Button('cont.', key=MicrocodeElements.CONT_STEP),
