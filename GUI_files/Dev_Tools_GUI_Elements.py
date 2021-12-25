@@ -66,7 +66,6 @@ MICROCODE_CENTRAL_COLUMN = [
               size=(11, 11))]
 ]
 
-
 LAYOUT_TAB_MICROCODE = [
     MICROCODE_UPPER_CONTROL_PANEL,
     [sg.Column([[sg.Table(values=[['', '']], headings=['#', 'name'], col_widths=[4, 8],
@@ -76,17 +75,18 @@ LAYOUT_TAB_MICROCODE = [
                 [sg.Button('1 step', key=MicrocodeElements.ONE_STEP),
                  sg.Button('cont.', key=MicrocodeElements.CONT_STEP),
                  sg.Input(key=MicrocodeElements.SPEED, change_submits=True,
-                          size=(10, 1))]])]
+                          size=(10, 1))]])
+    ]
 ]
 
-TABLE = [['Acc', 0], ['R', 0], ['IR', 0], ['PCL', 0], ['PCH', 0], ['PC', 0],
-         ['MAL', 0], ['MAH', 0], ['MAR', 0]]
+REGISTER_TABLE = [['Acc', 0], ['R', 0], ['IR', 0], ['PCL', 0], ['PCH', 0], ['PC', 0],
+                  ['MAL', 0], ['MAH', 0], ['MAR', 0]]
 
 SOFT_EMU_COL_REGISTERS = [
     [sg.Text('Registers')],
-    [sg.Table(values=TABLE[:][:], headings=['register', 'value'],
+    [sg.Table(values=REGISTER_TABLE[:][:], headings=['register', 'value'],
               auto_size_columns=False, display_row_numbers=True, justification='right',
-              key='-TABLE-', size=(48, 16), hide_vertical_scroll=True)],
+              key='-REGISTER_TABLE-', size=(48, 16), hide_vertical_scroll=True)],
 ]
 
 SOFT_EMU_COL_MEMORY = [
@@ -115,7 +115,7 @@ LAYOUT_TAB_ASSEMBLER = [
     [sg.Text('New file', key=AsmElements.FILENAME),
      sg.FileBrowse('Open', key=AsmElements.FB, target=AsmElements.FB, change_submits=True),
      sg.Button('Save', key=AsmElements.SAVE_BTN)],
-    [sg.Multiline(size=(44, 20), autoscroll=True, enable_events=True,
+    [sg.Multiline(size=(44, 20), autoscroll=True, change_submits=False,
                   key=AsmElements.INP_MULTILINE, enter_submits=True),
      sg.Multiline(size=(44, 20), key=AsmElements.OUT_MULTILINE, disabled=True, no_scrollbar=True)
      ]
