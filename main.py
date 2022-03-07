@@ -17,7 +17,7 @@ def controller(window: sg.Window, q: Queue):
         qe: QueueEntry = q.get()
         print(f'[Controller]: {qe=}')
 
-        if qe.data in (None, 'Exit', 'Cancel', 'Close'):
+        if qe.element in (None, 'Exit', 'Cancel', 'Close'):
             print('[Controller] Exiting program!')
             break
 

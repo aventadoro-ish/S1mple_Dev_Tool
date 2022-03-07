@@ -143,3 +143,7 @@ LAYOUT_TAB_GROUP = [
         border_width=0)
     ]
 ]
+
+MICROCODE_DATA_WINDOW = [
+    [sg.Button('Import isa.csv')]
+]

@@ -31,9 +31,23 @@ def event_loop(window: sg.Window, q: Queue) -> None:
 
         q.put(QueueEntry(tab, event, data))
 
+        special_event_handler(window, event, values, q)
+
 
 def close_main_window_event(window: sg.Window, values: dict, q: Queue) -> None:
     print(f'[View]: Closing Main Window!')
     q.put(QueueEntry(active_tab=None,
                      element=None,
                      data='Exit'))
+
+
+def special_event_handler(window: sg.Window, event, values: dict, q: Queue) -> None:
+    if event == MicrocodeElements.DATA_MENU:
+        data_menu = sg.Window('Data Menu', MICROCODE_DATA_WINDOW)
+
+        while True:
+            event, values = data_menu.read()
+
+            if event in (None, 'Exit', 'Close'):
+                break
+
