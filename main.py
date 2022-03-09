@@ -2,7 +2,7 @@ from Microcode import Microcode
 
 
 def main():
-    pass
+    setup_tools()
 
 
 def setup_tools():
@@ -11,6 +11,7 @@ def setup_tools():
 
     mc = Microcode()
     mc.load_rom_file('datafiles/rom.hex')
+    mc.load_control_word_layout_file('datafiles/cw_layout.txt')
     mc.export('datafiles/microcode.json')
 
 

@@ -6,6 +6,17 @@ import json
 class Microcode:
     def __init__(self):
         self.rom: IntelHex = None
+        self.control_word: tuple[str] = None
+
+    def load_control_word_layout_file(self, filename: str = None):
+        if filename is None:
+            filename = 'cw_layout.txt'
+
+        if not filename.endswith('.txt'):
+            filename += '.txt'
+
+        with open(filename, 'r') as file:
+            self.control_word = tuple(file.read().split())
 
     def load_rom_file(self, filename: str = None):
         if filename is None:
@@ -26,7 +37,10 @@ class Microcode:
         with open(filename, 'w+') as file:
             # TODO:  self.rom.tobinarray().tolist() kinda memory-inefficient.
             #  Find a way to serialize array to JSON
-            microcode_json = {'rom': self.rom.tobinarray().tolist()}
+            microcode_json = {
+                'rom': self.rom.tobinarray().tolist(),
+                'cw_layout': self.control_word
+            }
 
             beautifier_options = jsbeautifier.default_options()
             beautifier_options.indent_size = 2

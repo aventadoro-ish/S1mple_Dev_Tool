@@ -1,0 +1,5 @@
+counter[0] counter[1] counter[2] counter[3]
+carry_flag
+negative_flag
+zero_flag
+word[0] word[1] word[2] word[3] word[4]
