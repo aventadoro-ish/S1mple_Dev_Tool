@@ -1,0 +1,33 @@
+#,group,instruction,description,#b,operand order,mode,eg,flags,
+0,,NOP,do noting for 1 instruction; 4 clock cycles,0,,,,,00000
+1,Stack,PSR,Push R to stack,0,,,,,00001
+2,Stack,PLR,Pull (look up) stack entry to R without changing SP,0,,,,,00010
+3,Stack,PPR,Pop from stack to R and change stack pointer,0,,,,,00011
+4,Store,STR,"Store R to absolute address, #H #L",2,#H #L,absolute,STR 0x8eae,,00100
+5,Store,STR,"Store R to relative address, #H AC",1,AC #H,relative to AC,STR 0x8e,,00101
+6,Load,LDR,"Load R from absolute address, #H #L",2,#H #L,absolute,LDR 0xaeae,,00110
+7,Load,LDR,"Load R from relative address, #H R",1,R #H,relative to R,LDR R 0xae,,00111
+8,Load,LDR,"Load R from relative address, #H AC",1,AC #H,relative to AC,LDR AC 0xae,,01000
+9,Load,LDR,"Load R immediate, #value",1,#value,immediate,LDR 0xae,,01001
+10,ALU,ADD,AC = R + AC,0,,,,,01010
+11,ALU,ADD,AC = R + #value,1,#value,immediate,ADD 0xae,,01011
+12,ALU,INC,AC = R++,0,,,,,01100
+13,ALU,DEC,AC = R--,0,,,,,01101
+14,,INT,,0,,,,,01110
+15,ALU,LSL,"AC = R << 1 (left shift 1 bit, non cyclic)",0,,,,,01111
+16,,RTI,,0,,,,,10000
+17,ALU,ROL,"AC = R << 1 (left shift 1 bit, cyclic)",0,,,,C,10001
+18,Transfer,MOV,transfer R -> AC,0,R AC,,MOV R AC,,10010
+19,Transfer,MOV,transfer AC -> R,0,AC R,,MOV AC R,,10011
+20,Transfer,MOV,transfer PCL -> R,0,PCL R,,MOV PCL R,,10100
+21,Transfer,MOV,transfer PCH -> R,0,PCH R,,MOV PCH R,,10101
+22,Flow control,JSR,"push PCH, PCL to stack; jump tooperands: #H #L",0,,,JSR 0xaeae,,10110
+23,Flow control,JMP,Jump to #H #L (move #H #L into PCH and PCL),2,#H #L,,,,10111
+24,Flow control,RTS,Return from subroutine,0,,,,,11000
+25,Flow control,JPZ,Jump to HL if Zero flag is set,2,#H #L,,,Z,11001
+26,Flow control,JPC,Jump to HL if Carry flag is set,2,#H #L,,,C,11010
+27,Flow control,JPN,Jump to HL if Negative flag is set,2,#H #L,,,N,11011
+28,Flow control,JEQ,Jump to HL if R==value (#value #H #L),3,#value #H #L,,,Z,11100
+29,Flow control,JNE,Jump to HL if R!=value (#value #H #L),3,#value #H #L,,,Z,11101
+30,ALU,NEG,AC = -R,0,,,,,11110
+31,ALU,INV,AC = ~R,0,,,,,11111

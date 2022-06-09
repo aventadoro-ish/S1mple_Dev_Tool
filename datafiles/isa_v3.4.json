@@ -1,0 +1,161 @@
+[{
+  "name": "NOP",
+  "opcode": 0,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "PSR",
+  "opcode": 1,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "PLR",
+  "opcode": 2,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "PPR",
+  "opcode": 3,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "STR",
+  "opcode": 4,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "STR",
+  "opcode": 5,
+  "pattern": "AC #H",
+  "# byte ops": 1
+}, {
+  "name": "LDR",
+  "opcode": 6,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "LDR",
+  "opcode": 7,
+  "pattern": "R #H",
+  "# byte ops": 1
+}, {
+  "name": "LDR",
+  "opcode": 8,
+  "pattern": "AC #H",
+  "# byte ops": 1
+}, {
+  "name": "LDR",
+  "opcode": 9,
+  "pattern": "#value",
+  "# byte ops": 1
+}, {
+  "name": "ADD",
+  "opcode": 10,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "ADD",
+  "opcode": 11,
+  "pattern": "#value",
+  "# byte ops": 1
+}, {
+  "name": "INC",
+  "opcode": 12,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "DEC",
+  "opcode": 13,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "INT",
+  "opcode": 14,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "LSL",
+  "opcode": 15,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "RTI",
+  "opcode": 16,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "ROL",
+  "opcode": 17,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "MOV",
+  "opcode": 18,
+  "pattern": "R AC",
+  "# byte ops": 0
+}, {
+  "name": "MOV",
+  "opcode": 19,
+  "pattern": "AC R",
+  "# byte ops": 0
+}, {
+  "name": "MOV",
+  "opcode": 20,
+  "pattern": "PCL R",
+  "# byte ops": 0
+}, {
+  "name": "MOV",
+  "opcode": 21,
+  "pattern": "PCH R",
+  "# byte ops": 0
+}, {
+  "name": "JSR",
+  "opcode": 22,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "JMP",
+  "opcode": 23,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "RTS",
+  "opcode": 24,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "JPZ",
+  "opcode": 25,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "JPC",
+  "opcode": 26,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "JPN",
+  "opcode": 27,
+  "pattern": "#H #L",
+  "# byte ops": 2
+}, {
+  "name": "JEQ",
+  "opcode": 28,
+  "pattern": "#value #H #L",
+  "# byte ops": 3
+}, {
+  "name": "JNE",
+  "opcode": 29,
+  "pattern": "#value #H #L",
+  "# byte ops": 3
+}, {
+  "name": "NEG",
+  "opcode": 30,
+  "pattern": "",
+  "# byte ops": 0
+}, {
+  "name": "INV",
+  "opcode": 31,
+  "pattern": "",
+  "# byte ops": 0
+}]
