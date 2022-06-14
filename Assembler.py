@@ -421,15 +421,12 @@ class Assembler:
 
             elif line.type_ is LineType.DATA:
                 if line.data_type is AsmDataTypes.BYTE:
-                    print(type((int(line.tokens[1], 16), )))
-                    print(line.tokens[1])
                     snippet = (int(line.tokens[1], 16), )
 
                 elif line.data_type is AsmDataTypes.STRING:
                     # TODO: string literals support
-                    # string = ''.join(line.get_non_comment_tokens()[1:]).strip('"') + '\0'
-                    string = line.get_string_data()
-                    snippet = string.encode('ascii')
+                    string_ = line.get_string_data()
+                    snippet = string_.encode('ascii')
                     print(snippet)
 
                 elif line.data_type is AsmDataTypes.BYTE_ARRAY:
@@ -459,7 +456,6 @@ class Assembler:
             # TODO: string literals support
             # + 1 is a Null-terminator
             return len(line.get_string_data())
-            # return len(''.join(line.tokens[1:]).strip('"')) + 1
 
         if line.data_type is AsmDataTypes.BYTE_ARRAY:
             return len(line.get_non_comment_tokens()) - 1
@@ -471,8 +467,10 @@ class Assembler:
             if self.intermediate_code[addr] is not None:
                 # TODO: more info for debugging
                 raise Exception(f'Collision of data at address {addr}')
+
             idx = addr - start_addr
             self.intermediate_code[addr] = insert_list[idx]
+
             # print('*', insert_list[idx], self.intermediate_code[addr],
             #       type(self.intermediate_code[addr]))
 
