@@ -8,6 +8,7 @@ def main():
     with open('datafiles/isa_v3.4.json') as file:
         isa_json = json.load(file)
         isa = ISA(isa_json)
+        print('special ops:', isa.special_ops)
 
     Assembler('asm examples/basic/basic.asm', isa)
     # setup_tools()

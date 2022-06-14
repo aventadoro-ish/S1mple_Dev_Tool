@@ -65,25 +65,20 @@ class ISA:
 
         self.valid_words: set[str] = set(valid_words_temp)
 
-    @cache
-    def identify(self, name: str, addressing_mode_prefix: str, special_operands: str) -> int:
-        """
-        Get instruction opcode
-        :param name: Assembly-name
-        :type name: str
-        :param addressing_mode_prefix: '', '#', '@', '$', '@#'
-        :type addressing_mode_prefix: str
-        :param special_operands: what special operands were used
-        :type special_operands: str
-        :return: instruction opcode
-        :rtype: int
-        """
-        id_str = f'{name} {addressing_mode_prefix} {special_operands}'
-        try:
-            return self.fast_id_dict[id_str]
-        except KeyError:
-            raise AssemblyError('ERROR! Could not identify instruction: '
-                                f'{name=}, {addressing_mode_prefix=}, {special_operands=}.')
+    def identify(self, name: str, pattern: str) -> int:
+        return self.fast_id_dict[f'{name} {pattern}']
+
+    def __getitem__(self, item):
+        if type(item) is not int:
+            raise Exception('Non-int key given to get Instruction from ISA.'
+                            'Integer opcode expected!')
+
+        for idx, inst in enumerate(self.instructions):
+            if inst.opcode == item:
+                return self.instructions[idx]
+
+        raise KeyError(f'Unable to find Instruction with opcode {item} '
+                       f'in the ISA.')
 
     def printout(self):
         for inst in self.instructions:
@@ -109,6 +104,7 @@ class AddrMode(Enum):
     IMMEDIATE = auto()
     RELATIVE = auto()
     ABSOLUTE = auto()
+    REGISTERS = auto()
     IMM_ABS = auto()
 
 
@@ -185,14 +181,15 @@ class Line:
             print(f"*Line: Unable to determine addressing mode. self.line is None!")
             raise Exception(f"*Line: Unable to determine addressing mode. self.line is None!")
 
-        # TODO: the following if-elif chain does not handle ambitious addr_mode. fix it!
+        if self.line_contains_special_operand() and '$' in self.line:
+            return AddrMode.RELATIVE
+        if '#' in self.line and '@' in self.line:
+            return AddrMode.IMM_ABS
 
         if self.line_contains_special_operand():
-            return AddrMode.RELATIVE
-
+            return AddrMode.REGISTERS
         if '#' in self.line:
             return AddrMode.IMMEDIATE
-
         if '@' in self.line:
             return AddrMode.ABSOLUTE
 
@@ -206,6 +203,31 @@ class Line:
                 return True
 
         return False
+
+    def get_non_comment_tokens(self) -> list[str]:
+        if self.has_comment:
+            # TODO: this won't work with comments like ';comment'
+            n_inst_tokens = self.tokens.index(';')
+        else:
+            n_inst_tokens = len(self.tokens)
+
+        return self.tokens[:n_inst_tokens]
+
+    def get_instruction_pattern(self) -> str:
+        if self.type_ is not LineType.INSTRUCTION:
+            raise Exception(f'Trying to get instruction pattern form line of type '
+                            f'{self.type_}.')
+
+        pattern = []
+        for token in self.get_non_comment_tokens():
+            if token in self.ISA_.special_ops:
+                pattern.append(token)
+            elif token.startswith('@'):
+                pattern.append('# #')
+            elif token.startswith(('$', '#')):
+                pattern.append('#')
+
+        return ' '.join(pattern)
 
     def __repr__(self):
         if self.type_ is LineType.INSTRUCTION:
@@ -259,6 +281,7 @@ class AsmLineIterator:
 class AsmTypesLabel:
     name: str
     _address: int
+    _is_finalized: bool = False
 
     @property
     def address(self):
@@ -268,31 +291,84 @@ class AsmTypesLabel:
     def address(self, a):
         # TODO address validation
         self._address = a
+        if type(self.address) is int:
+            self._is_finalized = True
+
+    @property
+    def is_finalized(self):
+        return self._is_finalized
 
     @staticmethod
     def from_line(line: Line, address: int | None = None):
         name = line.line.split()[0].strip(':')
         return AsmTypesLabel(name, address)
 
+    def __str__(self):
+        return f'Label({self.name} -> {self._address})'
+
+
+class AsmTableLabels:
+    def __init__(self):
+        self.labels: list[AsmTypesLabel] = []
+
+    def __getitem__(self, item) -> AsmTypesLabel:
+        if type(item) is int:
+            return self._idx_lookup_(item)
+
+        if type(item) is str:
+            return self._name_lookup_(item)
+
+        raise Exception(f'')
+
+    def _idx_lookup_(self, idx) -> AsmTypesLabel:
+        return self.labels[idx]
+
+    def _name_lookup_(self, name) -> AsmTypesLabel:
+        for idx, label in enumerate(self.labels):
+            if name == label.name:
+                return self.labels[idx]
+
+        self.labels.append(AsmTypesLabel(name, None))
+        return self.labels[-1]
+
+    def fully_finalized(self) -> bool:
+        for label in self.labels:
+            if not label.is_finalized:
+                return False
+
+        return True
+
+    def printout(self):
+        for label in self.labels:
+            print(label)
+
 
 class Assembler:
     def __init__(self, filename: str, isa: ISA):
         Line.ISA_ = isa
-
+        self.isa = isa
         with open(filename, 'r') as prog:
             self.input_text = ''.join(prog.readlines())
-        # print(self.input_text)
 
-        self.labels: list[AsmTypesLabel] = []
+        # TODO: this is not very memory efficient, but 0.26 MB is not much
+        self.intermediate_code = [None] * 2**15
+
+        self.labels = AsmTableLabels()
 
         self.pass1()
+
+        self.pretty_printout()
+
+        self.labels.printout()
+        print(f'Label finalization: {self.labels.fully_finalized()}')
+
         self.pass2()
 
     def pass1(self):
         pc = 0
 
         for line in AsmLineIterator(self.input_text):
-            if line.type_ is LineType.EMPTY:
+            if line.type_ in (LineType.EMPTY, LineType.COMMENT):
                 continue
 
             print(repr(line))
@@ -304,11 +380,44 @@ class Assembler:
                     print(pc)
 
             elif line.type_ is LineType.INSTRUCTION:
-                # TODO: instruction handling for pass 1
-                print(pc)
-                pc += 1
+                opcode = self.isa.identify(
+                    name=line.tokens[0],
+                    pattern=line.get_instruction_pattern()
+                )
+
+                instruction = self.isa[opcode]
+
+                snippet = [x for x in line.get_non_comment_tokens() if x not in self.isa.special_ops]
+                snippet[0] = opcode
+
+                for byte in snippet[1:]:
+                    if re.match(r'\b[0123456789abcdef].[0123456789abcdef]+',
+                                byte.strip('@#$')):
+                        # TODO: convert to int explicit values
+                        pass
+
+                self._protected_intermediate_modification_(pc, snippet)
+                pc += instruction.n_byte_ops + 1
+
+                print(instruction, 'bytes len =', instruction.n_byte_ops + 1, '; pc = ', pc)
 
             elif line.type_ is LineType.DATA:
+                if line.data_type is AsmDataTypes.BYTE:
+                    print(type((int(line.tokens[1], 16), )))
+                    print(line.tokens[1])
+                    snippet = (int(line.tokens[1], 16), )
+
+                elif line.data_type is AsmDataTypes.STRING:
+                    string = ''.join(line.get_non_comment_tokens()[1:]).strip('"') + '\0'
+                    snippet = string.encode('ascii')
+                    print(snippet)
+
+                elif line.data_type is AsmDataTypes.BYTE_ARRAY:
+                    snippet = line.get_non_comment_tokens()[1:]
+                    snippet = [int(x.strip(','), 16) for x in snippet]
+
+                self._protected_intermediate_modification_(pc, snippet)
+
                 data_len = self._get_data_len(line)
                 pc += data_len
 
@@ -316,8 +425,8 @@ class Assembler:
                       f'{data_len}, new {pc=}')
 
             elif line.type_ is LineType.LABEL:
-                self.labels.append(AsmTypesLabel.from_line(line, pc))
-                print(f'*label {self.labels[-1].name} added to the ptr table')
+                label = AsmTypesLabel.from_line(line, pc)
+                self.labels[label.name].address = pc
 
             print()
 
@@ -327,10 +436,29 @@ class Assembler:
             return 1
 
         if line.data_type is AsmDataTypes.STRING:
-            return len(''.join(line.tokens[1:]))
+            # + 1 is a Null-terminator
+            return len(''.join(line.tokens[1:]).strip('"')) + 1
 
         if line.data_type is AsmDataTypes.BYTE_ARRAY:
-            return len(line.tokens) - 1
+            return len(line.get_non_comment_tokens()) - 1
+
+    def _protected_intermediate_modification_(self,
+                                              start_addr: int,
+                                              insert_list: list[int | str | None]):
+        for addr in range(start_addr, start_addr+len(insert_list)):
+            if self.intermediate_code[addr] is not None:
+                # TODO: more info for debugging
+                raise Exception(f'Collision of data at address {addr}')
+            idx = addr - start_addr
+            self.intermediate_code[addr] = insert_list[idx]
+            # print('*', insert_list[idx], self.intermediate_code[addr],
+            #       type(self.intermediate_code[addr]))
+
+    def pretty_printout(self):
+        for address in range(0, 2**15, 16):
+            snippet = self.intermediate_code[address:address+15]
+            if any([True for x in snippet if x is not None]):
+                print(f'{address:0>4x}\t{snippet}')
 
     def pass2(self):
         pass
