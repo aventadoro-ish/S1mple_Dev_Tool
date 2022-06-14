@@ -1,5 +1,6 @@
 import json
 import re
+import string
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import cache
@@ -112,6 +113,8 @@ class AsmDataTypes(Enum):
     STRING = 'ds'
     BYTE = 'db'
     BYTE_ARRAY = 'dba'
+
+    # TODO: pointers as data
 
     @classmethod
     def has_value(cls, value):
@@ -229,6 +232,17 @@ class Line:
 
         return ' '.join(pattern)
 
+    def get_string_data(self) -> str:
+        if self.data_type is not AsmDataTypes.STRING:
+            raise Exception(f'trying to extract string data from line with '
+                            f'type {self.type_} {self.data_type}. '
+                            f'{LineType.DATA} {AsmDataTypes.STRING} expected!')
+
+        idx1 = self.line.index('"') + 1
+        idx2 = self.line.index('"', idx1)
+        # print(self.line[idx1:idx2])
+        return self.line[idx1:idx2] + '\0'
+
     def __repr__(self):
         if self.type_ is LineType.INSTRUCTION:
             return f'Line("{self.line}", type={self.type_},' \
@@ -344,6 +358,8 @@ class AsmTableLabels:
 
 
 class Assembler:
+    DEFAULT_PADDING = 0
+
     def __init__(self, filename: str, isa: ISA):
         Line.ISA_ = isa
         self.isa = isa
@@ -357,8 +373,9 @@ class Assembler:
 
         self.pass1()
 
+        print()
         self.pretty_printout()
-
+        print()
         self.labels.printout()
         print(f'Label finalization: {self.labels.fully_finalized()}')
 
@@ -372,6 +389,7 @@ class Assembler:
                 continue
 
             print(repr(line))
+            # TODO: code cleanup here
 
             if line.type_ is LineType.ASM_CMD:
                 # TODO: better organisation for assembler directives
@@ -408,7 +426,9 @@ class Assembler:
                     snippet = (int(line.tokens[1], 16), )
 
                 elif line.data_type is AsmDataTypes.STRING:
-                    string = ''.join(line.get_non_comment_tokens()[1:]).strip('"') + '\0'
+                    # TODO: string literals support
+                    # string = ''.join(line.get_non_comment_tokens()[1:]).strip('"') + '\0'
+                    string = line.get_string_data()
                     snippet = string.encode('ascii')
                     print(snippet)
 
@@ -436,8 +456,10 @@ class Assembler:
             return 1
 
         if line.data_type is AsmDataTypes.STRING:
+            # TODO: string literals support
             # + 1 is a Null-terminator
-            return len(''.join(line.tokens[1:]).strip('"')) + 1
+            return len(line.get_string_data())
+            # return len(''.join(line.tokens[1:]).strip('"')) + 1
 
         if line.data_type is AsmDataTypes.BYTE_ARRAY:
             return len(line.get_non_comment_tokens()) - 1
@@ -458,7 +480,26 @@ class Assembler:
         for address in range(0, 2**15, 16):
             snippet = self.intermediate_code[address:address+15]
             if any([True for x in snippet if x is not None]):
-                print(f'{address:0>4x}\t{snippet}')
+                snippet_str = ''
+                ascii_repr = ''
+
+                for x in snippet:
+                    if type(x) is int:
+                        snippet_str += f'{x:0>2x} '
+                        if chr(x) in string.printable and x != 9:
+                            ascii_repr += chr(x)
+                        else:
+                            ascii_repr += '.'
+
+                    elif x is None:
+                        snippet_str += f'{Assembler.DEFAULT_PADDING:0>2x} '
+                        ascii_repr += '.'
+
+                    else:
+                        snippet_str += str(x)[0:2] + ' '
+                        ascii_repr += '.'
+
+                print(f'{address:0>4x}\t{snippet_str}\t[{ascii_repr}]')
 
     def pass2(self):
         pass
