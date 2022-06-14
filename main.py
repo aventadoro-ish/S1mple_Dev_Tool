@@ -1,9 +1,16 @@
+import json
+
 from Microcode import Microcode
+from Assembler import Assembler, ISA
 
 
 def main():
-    setup_tools()
+    with open('datafiles/isa_v3.4.json') as file:
+        isa_json = json.load(file)
+        isa = ISA(isa_json)
 
+    Assembler('asm examples/basic/basic.asm', isa)
+    # setup_tools()
 
 
 def setup_tools():

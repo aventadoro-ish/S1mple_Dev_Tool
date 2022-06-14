@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import cache
@@ -17,7 +18,7 @@ class Instruction:
     operand_order: str
 
     def __str__(self):
-        return f'Instruction({self.name}, {self.opcode} "{self.operand_order}")'
+        return f'Instruction({self.name}, {self.opcode}, "{self.operand_order}")'
 
     def to_json(self):
         return {'name': self.name, 'opcode': self.opcode,
@@ -30,25 +31,35 @@ class ISA:
         # {'NOP 0 ': 0, ... 'MOV 0 AC R': 19...}
         self.fast_id_dict: dict[str: int] = {}
 
-        # {opcode, (name, nob, nso, comment}
-        self.descriptive_dict: dict[int: tuple] = {}
+        self.instructions: list[Instruction] = []
 
         # (NOP, LDR, PSR ...)
         self.valid_words: tuple = ()
         valid_words_temp = []
 
-        for opcode, item in json_isa.items():
-            name = item['name']
-            n_byte_operands = item['n_byte_operands']
-            special_operands = item['special_operands']
+        self.special_ops = []
 
-            comment = item['comment']
+        for item in json_isa:
+            name: str = item['name']
+            n_byte_ops: int = int(item['# byte ops'])
+            pattern: str = item['pattern']
+            opcode = int(item['opcode'])
 
-            id_str = f'{name} {special_operands}'
-            self.fast_id_dict[id_str] = int(opcode)
+            for operand in pattern.split():
+                if operand.startswith('#'):
+                    pattern = pattern.replace(operand, '#')
+                    continue
 
-            self.descriptive_dict[int(opcode)] = (name, n_byte_operands,
-                                                  special_operands, comment)
+                if operand not in self.special_ops:
+                    self.special_ops.append(operand)
+
+            id_str = f'{name} {pattern}'
+            self.fast_id_dict[id_str] = opcode
+
+            self.instructions.append(Instruction(
+                opcode, name, n_byte_ops, pattern
+            ))
+
             if name not in valid_words_temp:
                 valid_words_temp.append(name)
 
@@ -74,16 +85,9 @@ class ISA:
             raise AssemblyError('ERROR! Could not identify instruction: '
                                 f'{name=}, {addressing_mode_prefix=}, {special_operands=}.')
 
-
-class Configuration(ISA):
-    # TODO: add more optional data: address space size, rom and ram address bounds
-    def __init__(self):
-        with open('config.json', 'r') as file:
-            config = json.load(file)
-
-            self.special_operands: tuple[str] = (config['special_operands'])
-            # self.addressing_modes = AddressingModes(config['addressing_modes'])
-            self.isa = ISA(config['ISA'], self.addressing_modes)
+    def printout(self):
+        for inst in self.instructions:
+            print(inst)
 
 
 class LineType(Enum):
@@ -109,7 +113,7 @@ class AddrMode(Enum):
 
 
 class Line:
-    CONFIG: Configuration = 'todo config'
+    ISA_: ISA = None
 
     def __init__(self, line: str | None = None):
         self.type_ = None  # LineType.COMMENT
@@ -121,73 +125,79 @@ class Line:
             self.process()
 
     def process(self):
-        self.determine_type()
+        self.type_ = self.determine_type()
 
         if self.type_ in (LineType.INSTRUCTION, LineType.LABELED_INSTRUCTION):
-            self.determine_addr_mode()
+            self.addr_mode = self.determine_addr_mode()
 
         if ';' in self.line:
             self.has_comment = True
 
-    def determine_type(self):
+    def determine_type(self) -> LineType:
         if self.line is None:
             print(f"*Line: Unable to determine line type. self.line is None!")
             raise Exception(f"*Line: Unable to determine line type. self.line is None!")
 
         if self.line.strip().startswith(';'):
-            self.type_ = LineType.COMMENT
-            return
+            return LineType.COMMENT
 
         if len(self.line) == 0:
-            self.type_ = LineType.EMPTY
-            return
+            return LineType.EMPTY
 
         # TODO: I think I had a better tokenizer somewhere
         tokens = self.line.split()
 
+        if tokens[0] == '.org':
+            return LineType.ASM_CMD
+
+        if tokens[0].endswith(':'):
+            return LineType.LABEL
+
+        if tokens[0].endswith(':') and tokens[1] in self.ISA_.valid_words:
+            return LineType.LABELED_INSTRUCTION
+
         # TODO: why doesn't self.CONFIG.valid_words work? fix.
-        if tokens[0] in self.CONFIG.isa.valid_words:
-            self.type_ = LineType.INSTRUCTION
-            return
-
-        if tokens[0] == '.PC:':
-            self.type_ = LineType.ASM_CMD
-            return
-
-        if tokens[0].endswith(':') and tokens[1] in self.CONFIG.isa.valid_words:
-            self.type_ = LineType.LABELED_INSTRUCTION
-            return
+        if tokens[0] in self.ISA_.valid_words:
+            return LineType.INSTRUCTION
 
         print(tokens)
 
         print(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
         raise Exception(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
 
-    def determine_addr_mode(self):
+    def determine_addr_mode(self) -> AddrMode:
         if self.line is None:
             print(f"*Line: Unable to determine addressing mode. self.line is None!")
             raise Exception(f"*Line: Unable to determine addressing mode. self.line is None!")
 
         # TODO: the following if-elif chain does not handle ambitious addr_mode. fix it!
 
-        # TODO: change to registers listed in the config
-        if any([x in self.line.split() for x in self.CONFIG.special_operands]):
-            self.addr_mode = AddrMode.RELATIVE
+        if self.line_contains_special_operand():
+            return AddrMode.RELATIVE
 
-        elif '#' in self.line:
-            self.addr_mode = AddrMode.IMMEDIATE
+        if '#' in self.line:
+            return AddrMode.IMMEDIATE
 
-        elif '@' in self.line:
-            self.addr_mode = AddrMode.ABSOLUTE
+        if '@' in self.line:
+            return AddrMode.ABSOLUTE
 
-        else:
-            self.addr_mode = AddrMode.NO_MODE
+        return AddrMode.NO_MODE
 
-    def pprint(self):
-        print(f'Line("{self.line}", type={self.type_}, addr_mode={self.addr_mode}, {self.has_comment=})')
+    def line_contains_special_operand(self):
+        tokens = self.line.split()
+
+        for token in tokens[:-1]:
+            if token in self.ISA_.special_ops:
+                return True
+
+        return False
+
+    def __repr__(self):
+        return f'Line("{self.line}", type={self.type_},' \
+               f' addr_mode={self.addr_mode}, {self.has_comment=})'
 
 
-class LineProcessor:
+class AsmLineIterator:
     def __init__(self, prog_text: str):
         self.prog_text = prog_text
         self.line_buf = ''
@@ -202,25 +212,72 @@ class LineProcessor:
         # TODO: this exit condition requires the program to end with an empty line
         while self._char_idx < len(self.prog_text):
             char = self.prog_text[self._char_idx]
-
-            prev_char = ''
-            if self._char_idx > 1:
-                prev_char = self.prog_text[self._char_idx - 1]
-
+            self.line_buf += char
             self._char_idx += 1
 
-            if prev_char == '\\' and char == '\n':
+            if self.line_buf.endswith(('\\\r\n', '\\\n')):
+                self.line_buf = self.line_buf.replace('\\\r\n', '')
+                self.line_buf = self.line_buf.replace('\\\n', '')
                 continue
 
-            self.line_buf += char
-
-            if char == '\n':
-                copy = self.line_buf[:-1]
+            if self.line_buf.endswith(('\r\n', '\n')):
+                copy = self.line_buf.strip('\r\n')
                 self.line_buf = ''
-
+                # print(copy)
                 return Line(copy)
 
         raise StopIteration
+
+
+@dataclass
+class AsmTypesLabel:
+    name: str
+    _address: int
+
+    @property
+    def address(self):
+        return self._address
+
+    @address.setter
+    def address(self, a):
+        # TODO address validation
+        self._address = a
+
+
+class Assembler:
+    def __init__(self, filename: str, isa: ISA):
+        Line.ISA_ = isa
+
+        with open(filename, 'r') as prog:
+            self.input_text = ''.join(prog.readlines())
+        # print(self.input_text)
+
+        self.labels: list[AsmTypesLabel] = []
+
+        self.pass1()
+        self.pass2()
+
+    def pass1(self):
+        pc = 0
+
+        for line in AsmLineIterator(self.input_text):
+            print(repr(line))
+            tokens = line.line.split()
+
+            if line.type_ == LineType.ASM_CMD:
+                if tokens[0] == '.org':
+                    pc = int(tokens[1], 16)
+                    print(pc)
+
+            if line.type_ in (LineType.INSTRUCTION, LineType.LABELED_INSTRUCTION):
+                print(pc)
+                pc += 1
+
+            if line.type_ in (LineType.LABEL, LineType.LABELED_INSTRUCTION):
+                pass
+
+    def pass2(self):
+        pass
 
 
 def csv_isa_to_json(csv_filename: str | None = None, json_filename: str | None = None,
@@ -253,7 +310,9 @@ def csv_isa_to_json(csv_filename: str | None = None, json_filename: str | None =
     with open(csv_filename, 'r') as file:
         csv_reader = csv.reader(file)
 
-        next(csv_reader, None)  # skip the headers
+        for x in range(skip_header):
+            next(csv_reader, None)  # skip the headers
+
         for row in csv_reader:
             inst = Instruction(int(row[opcode_col]), row[name_col],
                                int(row[n_byte_ops_col]), row[special_ops_col])
