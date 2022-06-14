@@ -6,7 +6,29 @@ label:          ; word followed by a colon is a label
     NOP         ; instruction
     LDR #10     ; hash-symbol is used for immediate addressing
     STR @2000   ; at-symbol is used for absolute addressing
-    MOV R PC
+    MOV R PC    ; example of register or special operands
+    JMP @loop
+
+
+.org 1050
+text:
+ds  "hello there!"
+
+single_byte:
+db  10
+
+byte_array:
+dba 00, 11, 22, 33, 44
+
+.org 2000
+loop:
+    NOP
+    LDR @single_byte
+    INC
+    MOV A R
+    STR @single_byte
+    JMP @loop
+
 
 ; lines can be concatenated using backslash \
 this line is concatenated to the previous one, \

@@ -95,8 +95,8 @@ class LineType(Enum):
     INSTRUCTION = auto()
     EMPTY = auto()
     ASM_CMD = auto()
-    LABELED_INSTRUCTION = auto()
     LABEL = auto()
+    DATA = auto()
 
 
 class AddrMode(Enum):
@@ -112,26 +112,47 @@ class AddrMode(Enum):
     IMM_ABS = auto()
 
 
+class AsmDataTypes(Enum):
+    STRING = 'ds'
+    BYTE = 'db'
+    BYTE_ARRAY = 'dba'
+
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
+
 class Line:
     ISA_: ISA = None
 
     def __init__(self, line: str | None = None):
         self.type_ = None  # LineType.COMMENT
         self.addr_mode = None
+        self.data_type = None
         self.has_comment = False
         self.line = line
+        self.tokens: list[str] = []
 
         if line is not None:
             self.process()
 
     def process(self):
+        # TODO: I think I had a better tokenizer somewhere
+        self.tokens = self.line.split()
+
         self.type_ = self.determine_type()
 
-        if self.type_ in (LineType.INSTRUCTION, LineType.LABELED_INSTRUCTION):
+        if self.type_ is LineType.INSTRUCTION:
             self.addr_mode = self.determine_addr_mode()
+
+        elif self.type_ is LineType.DATA:
+            self.data_type = self.determine_data_type()
 
         if ';' in self.line:
             self.has_comment = True
+
+    def determine_data_type(self) -> AsmDataTypes:
+        return AsmDataTypes(self.tokens[0])
 
     def determine_type(self) -> LineType:
         if self.line is None:
@@ -144,23 +165,17 @@ class Line:
         if len(self.line) == 0:
             return LineType.EMPTY
 
-        # TODO: I think I had a better tokenizer somewhere
-        tokens = self.line.split()
-
-        if tokens[0] == '.org':
+        if self.tokens[0] == '.org':
             return LineType.ASM_CMD
 
-        if tokens[0].endswith(':'):
+        if self.tokens[0].endswith(':'):
             return LineType.LABEL
 
-        if tokens[0].endswith(':') and tokens[1] in self.ISA_.valid_words:
-            return LineType.LABELED_INSTRUCTION
-
-        # TODO: why doesn't self.CONFIG.valid_words work? fix.
-        if tokens[0] in self.ISA_.valid_words:
+        if self.tokens[0] in self.ISA_.valid_words:
             return LineType.INSTRUCTION
 
-        print(tokens)
+        if AsmDataTypes.has_value(self.tokens[0]):
+            return LineType.DATA
 
         print(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
         raise Exception(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
@@ -193,8 +208,19 @@ class Line:
         return False
 
     def __repr__(self):
+        if self.type_ is LineType.INSTRUCTION:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' addr_mode={self.addr_mode}, {self.has_comment=})'
+
+        if self.type_ is LineType.DATA:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' data_type={self.data_type}, {self.has_comment=})'
+
+        if self.type_ is LineType.COMMENT:
+            return f'Line("{self.line}", type={self.type_})'
+
         return f'Line("{self.line}", type={self.type_},' \
-               f' addr_mode={self.addr_mode}, {self.has_comment=})'
+               f' {self.has_comment=})'
 
 
 class AsmLineIterator:
@@ -243,6 +269,11 @@ class AsmTypesLabel:
         # TODO address validation
         self._address = a
 
+    @staticmethod
+    def from_line(line: Line, address: int | None = None):
+        name = line.line.split()[0].strip(':')
+        return AsmTypesLabel(name, address)
+
 
 class Assembler:
     def __init__(self, filename: str, isa: ISA):
@@ -261,20 +292,45 @@ class Assembler:
         pc = 0
 
         for line in AsmLineIterator(self.input_text):
-            print(repr(line))
-            tokens = line.line.split()
+            if line.type_ is LineType.EMPTY:
+                continue
 
-            if line.type_ == LineType.ASM_CMD:
-                if tokens[0] == '.org':
-                    pc = int(tokens[1], 16)
+            print(repr(line))
+
+            if line.type_ is LineType.ASM_CMD:
+                # TODO: better organisation for assembler directives
+                if line.tokens[0] == '.org':
+                    pc = int(line.tokens[1], 16)
                     print(pc)
 
-            if line.type_ in (LineType.INSTRUCTION, LineType.LABELED_INSTRUCTION):
+            elif line.type_ is LineType.INSTRUCTION:
+                # TODO: instruction handling for pass 1
                 print(pc)
                 pc += 1
 
-            if line.type_ in (LineType.LABEL, LineType.LABELED_INSTRUCTION):
-                pass
+            elif line.type_ is LineType.DATA:
+                data_len = self._get_data_len(line)
+                pc += data_len
+
+                print(f'data line: {line.line} of length '
+                      f'{data_len}, new {pc=}')
+
+            elif line.type_ is LineType.LABEL:
+                self.labels.append(AsmTypesLabel.from_line(line, pc))
+                print(f'*label {self.labels[-1].name} added to the ptr table')
+
+            print()
+
+    @staticmethod
+    def _get_data_len(line: Line) -> int:
+        if line.data_type is AsmDataTypes.BYTE:
+            return 1
+
+        if line.data_type is AsmDataTypes.STRING:
+            return len(''.join(line.tokens[1:]))
+
+        if line.data_type is AsmDataTypes.BYTE_ARRAY:
+            return len(line.tokens) - 1
 
     def pass2(self):
         pass
