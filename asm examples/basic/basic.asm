@@ -18,7 +18,7 @@ single_byte:
 db  01
 
 byte_array:
-dba 00, 11, 22, 33, 44
+dba 00, 11, 22, 33, 44, 55, 66, 77
 
 .org 2000
 loop:

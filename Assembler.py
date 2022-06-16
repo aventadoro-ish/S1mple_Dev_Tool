@@ -1,7 +1,7 @@
 import json
 import re
 import string
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from functools import cache
 from typing import Iterator
@@ -16,6 +16,7 @@ class Instruction:
     opcode: int
     name: str
     n_byte_ops: int
+    operand_pattern: str
     operand_order: str
 
     def __str__(self):
@@ -44,6 +45,7 @@ class ISA:
             name: str = item['name']
             n_byte_ops: int = int(item['# byte ops'])
             pattern: str = item['pattern']
+            order: str = item['pattern']
             opcode = int(item['opcode'])
 
             for operand in pattern.split():
@@ -58,7 +60,7 @@ class ISA:
             self.fast_id_dict[id_str] = opcode
 
             self.instructions.append(Instruction(
-                opcode, name, n_byte_ops, pattern
+                opcode, name, n_byte_ops, pattern, order
             ))
 
             if name not in valid_words_temp:
@@ -216,6 +218,11 @@ class Line:
 
         return self.tokens[:n_inst_tokens]
 
+    def process_instruction(self):
+        if self.type_ is not LineType.INSTRUCTION:
+            raise f'Trying to extract Instruction info from ' \
+                  f'non-Instruction LineType: {self.type_}'
+
     def get_instruction_pattern(self) -> str:
         if self.type_ is not LineType.INSTRUCTION:
             raise Exception(f'Trying to get instruction pattern form line of type '
@@ -242,6 +249,48 @@ class Line:
         idx2 = self.line.index('"', idx1)
         # print(self.line[idx1:idx2])
         return self.line[idx1:idx2] + '\0'
+
+    def get_code_snippet(self) -> list[str | int]:
+        if self.type_ is not LineType.INSTRUCTION:
+            raise f'Trying to extract Instruction info from ' \
+                  f'non-Instruction LineType: {self.type_}'
+
+        opcode = self.ISA_.identify(
+            name=self.tokens[0],
+            pattern=self.get_instruction_pattern()
+        )
+        instruction = self.ISA_[opcode]
+        print(instruction)
+        snippet = [instruction.opcode]
+
+        for token in self.get_non_comment_tokens()[1:]:
+            if token in self.ISA_.special_ops:
+                continue
+
+            try:
+                val = int(token.strip('@#$'), 16)
+                n_bytes = -len(token.strip('@#$')) // -2
+                val_bytes = val.to_bytes(n_bytes, 'big')
+
+                snippet.extend([int(x) for x in val_bytes])
+
+            except ArithmeticError:
+                raise Exception(f'Operand {token} on line {self.line} '
+                                f'exceeds max int value of 2 bytes.')
+            except ValueError:
+                if token.startswith('@'):
+                    snippet.append(token + '.H')
+                    snippet.append(token + '.L')
+                    continue
+
+        print(snippet)
+
+        # print(self.get_non_comment_tokens())
+        # snippet = [x for x in self.get_non_comment_tokens() if x not in self.ISA_.special_ops]
+        # snippet[0] = opcode
+        # print(snippet)
+
+        return snippet
 
     def __repr__(self):
         if self.type_ is LineType.INSTRUCTION:
@@ -295,6 +344,7 @@ class AsmLineIterator:
 class AsmTypesLabel:
     name: str
     _address: int
+    used_at_addresses: list[int] = field(default_factory=list)
     _is_finalized: bool = False
 
     @property
@@ -318,6 +368,9 @@ class AsmTypesLabel:
         return AsmTypesLabel(name, address)
 
     def __str__(self):
+        if len(self.used_at_addresses) > 0:
+            return f'Label({self.name} -> {self._address}, used @ {self.used_at_addresses})'
+
         return f'Label({self.name} -> {self._address})'
 
 
@@ -398,26 +451,18 @@ class Assembler:
                     print(pc)
 
             elif line.type_ is LineType.INSTRUCTION:
-                opcode = self.isa.identify(
-                    name=line.tokens[0],
-                    pattern=line.get_instruction_pattern()
-                )
+                code = line.get_code_snippet()
 
-                instruction = self.isa[opcode]
+                for idx, byte in enumerate(code[1:]):
+                    if type(byte) is int:
+                        continue
 
-                snippet = [x for x in line.get_non_comment_tokens() if x not in self.isa.special_ops]
-                snippet[0] = opcode
+                    # treat as pointer
+                    name = byte.strip('@#$').replace('.H', '').replace('.L', '')
+                    self.labels[name].used_at_addresses.append(pc)
 
-                for byte in snippet[1:]:
-                    if re.match(r'\b[0123456789abcdef].[0123456789abcdef]+',
-                                byte.strip('@#$')):
-                        # TODO: convert to int explicit values
-                        pass
-
-                self._protected_intermediate_modification_(pc, snippet)
-                pc += instruction.n_byte_ops + 1
-
-                print(instruction, 'bytes len =', instruction.n_byte_ops + 1, '; pc = ', pc)
+                self._protected_intermediate_modification_(pc, code)
+                pc += len(code)
 
             elif line.type_ is LineType.DATA:
                 if line.data_type is AsmDataTypes.BYTE:
