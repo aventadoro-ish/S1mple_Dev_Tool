@@ -1,5 +1,7 @@
 import json
 
+from intelhex import IntelHex
+
 from Microcode import Microcode
 from Assembler import Assembler, ISA
 
@@ -10,7 +12,10 @@ def main():
         isa = ISA(isa_json)
         print('special ops:', isa.special_ops)
 
-    Assembler('asm examples/basic/basic.asm', isa)
+    ih = Assembler('asm examples/basic/basic.asm', isa).export_to_ih()
+    with open('asm examples/basic/basic.hex', 'w') as file:
+        ih.tofile(file, 'hex')
+
     # setup_tools()
 
 

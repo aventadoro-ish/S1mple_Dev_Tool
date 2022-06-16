@@ -6,6 +6,8 @@ from enum import Enum, auto
 from functools import cache
 from typing import Iterator
 
+from intelhex import IntelHex
+
 
 class AssemblyError(Exception):
     pass
@@ -591,6 +593,13 @@ class Assembler:
 
             print(f'{self.labels[name]}, {modifier} -> {address:x}')
             self.intermediate_code[addr] = address
+
+    def export_to_ih(self) -> IntelHex:
+        ih = IntelHex()
+        for addr, byte in enumerate(self.intermediate_code):
+            ih[addr] = byte
+
+        return ih
 
 
 def csv_isa_to_json(csv_filename: str | None = None, json_filename: str | None = None,
