@@ -130,6 +130,10 @@ class AsmDataTypes(Enum):
 
 
 class Line:
+    """
+    Class for parsing assembly lines. It determines the type of the line,
+    helps to extract useful data from it.
+    """
     ISA_: ISA = None
 
     def __init__(self, line: str | None = None):
@@ -223,11 +227,6 @@ class Line:
             n_inst_tokens = len(self.tokens)
 
         return self.tokens[:n_inst_tokens]
-
-    def process_instruction(self):
-        if self.type_ is not LineType.INSTRUCTION:
-            raise f'Trying to extract Instruction info from ' \
-                  f'non-Instruction LineType: {self.type_}'
 
     def get_instruction_pattern(self) -> str:
         if self.type_ is not LineType.INSTRUCTION:
