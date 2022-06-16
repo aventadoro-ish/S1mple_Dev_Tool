@@ -462,13 +462,25 @@ class AsmTableLabels:
 class Assembler:
     DEFAULT_PADDING = 0
 
+    # Assembler plans:
+    # TODO: better instruction identification -> implied addressing modes
+    # TODO: add get_item to AsmTypesLabel, so #values can be defined resolved
+    # TODO: Directive to add labels and pointers
+    # TODO: Directive to define symbols
+    # TODO: compilation logs
+    # TODO: int base prefixes support
+    # TODO: better exception handling (AsmException, AsmWarning)
+
+    # Possible experiments
+    # refactoring Line class to be base class for an interface
+    #   turn LineTypes to be subclasses of Line (InstructionLine, LabelLine)
+
     def __init__(self, filename: str, isa: ISA):
         Line.ISA_ = isa
         self.isa = isa
         with open(filename, 'r') as prog:
             self.input_text = ''.join(prog.readlines())
 
-        # TODO: this is not very memory efficient, but 0.26 MB is not much
         self.intermediate_code = [None] * 2**15
 
         self.labels = AsmTableLabels()
