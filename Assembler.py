@@ -92,7 +92,7 @@ class LineType(Enum):
     COMMENT = auto()
     INSTRUCTION = auto()
     EMPTY = auto()
-    ASM_CMD = auto()
+    DIRECTIVE = auto()
     LABEL = auto()
     DATA = auto()
 
@@ -109,6 +109,10 @@ class AddrMode(Enum):
     ABSOLUTE = auto()
     REGISTERS = auto()
     IMM_ABS = auto()
+
+
+class AsmDirectives(Enum):
+    ORG = 'org'
 
 
 class AsmDataTypes(Enum):
@@ -167,7 +171,7 @@ class Line:
             return LineType.EMPTY
 
         if self.tokens[0] == '.org':
-            return LineType.ASM_CMD
+            return LineType.DIRECTIVE
 
         if self.tokens[0].endswith(':'):
             return LineType.LABEL
@@ -309,6 +313,13 @@ class Line:
             snippet = [int(x.strip(','), 16) for x in snippet]
 
         return snippet
+
+    def get_directive_type(self) -> AsmDirectives:
+        if self.type_ is not LineType.DIRECTIVE:
+            raise Exception(f'Extracting Directive-data from a non-directive '
+                            f'line: "{self.line}" ({self.type_})')
+
+        return AsmDirectives(self.tokens[0].strip('.'))
 
     def __repr__(self):
         if self.type_ is LineType.INSTRUCTION:
@@ -463,15 +474,8 @@ class Assembler:
         self.labels = AsmTableLabels()
 
         self.pass1()
-
-        print()
-        self.pretty_printout()
-        print()
-        self.labels.printout()
-        print(f'Label finalization: {self.labels.fully_finalized()}')
-
-        print('\npass 2\n')
         self.pass2()
+
         print()
         self.pretty_printout()
 
@@ -482,14 +486,10 @@ class Assembler:
             if line.type_ in (LineType.EMPTY, LineType.COMMENT):
                 continue
 
-            print(repr(line))
-            # TODO: code cleanup here
-
-            if line.type_ is LineType.ASM_CMD:
-                # TODO: better organisation for assembler directives
-                if line.tokens[0] == '.org':
+            if line.type_ is LineType.DIRECTIVE:
+                if line.get_directive_type() is AsmDirectives.ORG:
                     pc = int(line.tokens[1], 16)
-                    print(pc)
+                    print(f'.org directive: {pc=}')
 
             elif line.type_ is LineType.INSTRUCTION:
                 code = line.get_code_snippet()
@@ -516,8 +516,6 @@ class Assembler:
             elif line.type_ is LineType.LABEL:
                 label = AsmTypesLabel.from_line(line, pc)
                 self.labels[label.name].address = pc
-
-            print()
 
     def _protected_intermediate_modification_(self,
                                               start_addr: int,
