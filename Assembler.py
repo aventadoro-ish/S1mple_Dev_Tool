@@ -484,11 +484,10 @@ class Assembler:
             elif line.type_ is LineType.INSTRUCTION:
                 code = line.get_code_snippet()
 
-                for idx, byte in enumerate(code[1:]):
+                for byte in code[1:]:
                     if type(byte) is int:
                         continue
 
-                    # treat as pointer
                     name = byte.replace('#H', '').replace('#L', '')
                     self.labels[name].used_at = pc  # TODO: this feels awkward
 
