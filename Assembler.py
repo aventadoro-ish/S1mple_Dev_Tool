@@ -145,27 +145,80 @@ class Line:
         self.tokens: list[str] = []
 
         if line is not None:
-            self.process()
+            self._process_()
 
-    def process(self):
+    @property
+    def memory_snippet(self) -> list[str | int]:
+        if self.type_ is LineType.INSTRUCTION:
+            return self._get_code_snippet_()
+
+        if self.type_ is LineType.DATA:
+            return self._get_data_snippet_()
+
+        raise Exception(
+            f'Invalid LineType. Unable extract memory snippet from {self.type_}'
+        )
+
+    @property
+    def type(self) -> LineType:
+        return self.type_
+
+    @property
+    def subtype(self):
+        match self.type_:
+            case LineType.DATA:
+                return self.data_type
+            case LineType.DIRECTIVE:
+                return self._determine_directive_type_()
+            case LineType.INSTRUCTION:
+                return self.addr_mode
+
+        raise Exception(
+            f'Invalid LineType. Unable extract memory snippet from {self.type_}'
+        )
+
+    def get_non_comment_tokens(self) -> list[str]:
+        if self.has_comment:
+            comment_start_idx = self.line.index(';')
+            n_inst_tokens = len(self.line[:comment_start_idx].split())
+
+        else:
+            n_inst_tokens = len(self.tokens)
+
+        return self.tokens[:n_inst_tokens]
+
+    def __repr__(self):
+        if self.type_ is LineType.INSTRUCTION:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' addr_mode={self.addr_mode}, {self.has_comment=})'
+
+        if self.type_ is LineType.DATA:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' data_type={self.data_type}, {self.has_comment=})'
+
+        if self.type_ is LineType.COMMENT:
+            return f'Line("{self.line}", type={self.type_})'
+
+        return f'Line("{self.line}", type={self.type_},' \
+               f' {self.has_comment=})'
+
+    # private
+    def _process_(self):
         # TODO: I think I had a better tokenizer somewhere
         self.tokens = self.line.split()
 
-        self.type_ = self.determine_type()
+        self.type_ = self._determine_type_()
 
         if self.type_ is LineType.INSTRUCTION:
-            self.addr_mode = self.determine_addr_mode()
+            self.addr_mode = self._determine_addr_mode_()
 
         elif self.type_ is LineType.DATA:
-            self.data_type = self.determine_data_type()
+            self.data_type = self._determine_data_type_()
 
         if ';' in self.line:
             self.has_comment = True
 
-    def determine_data_type(self) -> AsmDataTypes:
-        return AsmDataTypes(self.tokens[0])
-
-    def determine_type(self) -> LineType:
+    def _determine_type_(self) -> LineType:
         if self.line is None:
             print(f"*Line: Unable to determine line type. self.line is None!")
             raise Exception(f"*Line: Unable to determine line type. self.line is None!")
@@ -191,17 +244,21 @@ class Line:
         print(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
         raise Exception(f"*Line: Unable to determine line type. Unknown type! \"{self.line}\"")
 
-    def determine_addr_mode(self) -> AddrMode:
+    # subtypes
+    def _determine_data_type_(self) -> AsmDataTypes:
+        return AsmDataTypes(self.tokens[0])
+
+    def _determine_addr_mode_(self) -> AddrMode:
         if self.line is None:
             print(f"*Line: Unable to determine addressing mode. self.line is None!")
             raise Exception(f"*Line: Unable to determine addressing mode. self.line is None!")
 
-        if self.line_contains_special_operand() and '$' in self.line:
+        if self._line_contains_special_operand_() and '$' in self.line:
             return AddrMode.RELATIVE
         if '#' in self.line and '@' in self.line:
             return AddrMode.IMM_ABS
 
-        if self.line_contains_special_operand():
+        if self._line_contains_special_operand_():
             return AddrMode.REGISTERS
         if '#' in self.line:
             return AddrMode.IMMEDIATE
@@ -210,25 +267,22 @@ class Line:
 
         return AddrMode.NO_MODE
 
-    def line_contains_special_operand(self):
-        tokens = self.line.split()
+    def _determine_directive_type_(self) -> AsmDirectives:
+        if self.type_ is not LineType.DIRECTIVE:
+            raise Exception(f'Extracting Directive-data from a non-directive '
+                            f'line: "{self.line}" ({self.type_})')
 
-        for token in tokens[:-1]:
+        return AsmDirectives(self.tokens[0].strip('.'))
+
+    # instruction stuff
+    def _line_contains_special_operand_(self):
+        for token in self.tokens:
             if token in self.ISA_.special_ops:
                 return True
 
         return False
 
-    def get_non_comment_tokens(self) -> list[str]:
-        if self.has_comment:
-            # TODO: this won't work with comments like ';comment'
-            n_inst_tokens = self.tokens.index(';')
-        else:
-            n_inst_tokens = len(self.tokens)
-
-        return self.tokens[:n_inst_tokens]
-
-    def get_instruction_pattern(self) -> str:
+    def _get_instruction_pattern_(self) -> str:
         if self.type_ is not LineType.INSTRUCTION:
             raise Exception(f'Trying to get instruction pattern form line of type '
                             f'{self.type_}.')
@@ -244,25 +298,15 @@ class Line:
 
         return ' '.join(pattern)
 
-    def get_string_data(self) -> str:
-        if self.data_type is not AsmDataTypes.STRING:
-            raise Exception(f'trying to extract string data from line with '
-                            f'type {self.type_} {self.data_type}. '
-                            f'{LineType.DATA} {AsmDataTypes.STRING} expected!')
-
-        idx1 = self.line.index('"') + 1
-        idx2 = self.line.index('"', idx1)
-        # print(self.line[idx1:idx2])
-        return self.line[idx1:idx2] + '\0'
-
-    def get_code_snippet(self) -> list[str | int]:
+    # snippets
+    def _get_code_snippet_(self) -> list[str | int]:
         if self.type_ is not LineType.INSTRUCTION:
             raise f'Trying to extract Instruction info from ' \
                   f'non-Instruction LineType: {self.type_}'
 
         opcode = self.ISA_.identify(
             name=self.tokens[0],
-            pattern=self.get_instruction_pattern()
+            pattern=self._get_instruction_pattern_()
         )
         instruction = self.ISA_[opcode]
         snippet = [instruction.opcode]
@@ -300,13 +344,15 @@ class Line:
 
         return snippet
 
-    def get_data_snippet(self) -> list[str | int]:
+    def _get_data_snippet_(self) -> list[str | int]:
         if self.data_type is AsmDataTypes.BYTE:
             snippet = (int(self.tokens[1], 16),)
 
         elif self.data_type is AsmDataTypes.STRING:
-            # TODO: string literals support
-            string_ = self.get_string_data()
+            idx1 = self.line.index('"') + 1
+            idx2 = self.line.index('"', idx1)
+            string_ = self.line[idx1:idx2] + '\0'
+
             snippet = tuple(string_.encode('ascii'))
 
         elif self.data_type is AsmDataTypes.BYTE_ARRAY:
@@ -315,30 +361,11 @@ class Line:
 
         return snippet
 
-    def get_directive_type(self) -> AsmDirectives:
-        if self.type_ is not LineType.DIRECTIVE:
-            raise Exception(f'Extracting Directive-data from a non-directive '
-                            f'line: "{self.line}" ({self.type_})')
-
-        return AsmDirectives(self.tokens[0].strip('.'))
-
-    def __repr__(self):
-        if self.type_ is LineType.INSTRUCTION:
-            return f'Line("{self.line}", type={self.type_},' \
-                   f' addr_mode={self.addr_mode}, {self.has_comment=})'
-
-        if self.type_ is LineType.DATA:
-            return f'Line("{self.line}", type={self.type_},' \
-                   f' data_type={self.data_type}, {self.has_comment=})'
-
-        if self.type_ is LineType.COMMENT:
-            return f'Line("{self.line}", type={self.type_})'
-
-        return f'Line("{self.line}", type={self.type_},' \
-               f' {self.has_comment=})'
-
 
 class AsmLineIterator:
+    """
+    Is used for proper iteration over Assembly file, concatenating lines with backslash
+    """
     def __init__(self, prog_text: str):
         self.prog_text = prog_text
         self.line_buf = ''
@@ -496,16 +523,16 @@ class Assembler:
         pc = 0
 
         for line in AsmLineIterator(self.input_text):
-            if line.type_ in (LineType.EMPTY, LineType.COMMENT):
+            if line.type in (LineType.EMPTY, LineType.COMMENT):
                 continue
 
-            if line.type_ is LineType.DIRECTIVE:
-                if line.get_directive_type() is AsmDirectives.ORG:
+            if line.type is LineType.DIRECTIVE:
+                if line.subtype is AsmDirectives.ORG:
                     pc = int(line.tokens[1], 16)
                     print(f'.org directive: {pc=}')
 
-            elif line.type_ is LineType.INSTRUCTION:
-                code = line.get_code_snippet()
+            elif line.type is LineType.INSTRUCTION:
+                code = line.memory_snippet
 
                 for byte in code[1:]:
                     if type(byte) is int:
@@ -519,14 +546,14 @@ class Assembler:
 
                 print(f'{line.get_non_comment_tokens()} -> {code}')
 
-            elif line.type_ is LineType.DATA:
-                snip = line.get_data_snippet()
+            elif line.type is LineType.DATA:
+                snip = line.memory_snippet
                 self._protected_intermediate_modification_(pc, snip)
                 pc += len(snip)
 
                 print(f'data: {snip} of length {len(snip)}, new {pc=}')
 
-            elif line.type_ is LineType.LABEL:
+            elif line.type is LineType.LABEL:
                 label = AsmTypesLabel.from_line(line, pc)
                 self.labels[label.name].address = pc
 
