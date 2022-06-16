@@ -338,7 +338,6 @@ class AsmLineIterator:
         return self
 
     def __next__(self) -> Line:
-        # TODO: this exit condition requires the program to end with an empty line
         while self._char_idx < len(self.prog_text):
             char = self.prog_text[self._char_idx]
             self.line_buf += char
@@ -354,6 +353,11 @@ class AsmLineIterator:
                 self.line_buf = ''
                 # print(copy)
                 return Line(copy)
+
+        else:
+            if self._char_idx == len(self.prog_text):
+                self._char_idx += 1
+                return Line(self.line_buf)
 
         raise StopIteration
 
