@@ -31,6 +31,7 @@ loop:
 
     STR @single_byte
     JMP @loop
+    JEQ #23 @label
 
 
 ; lines can be concatenated using backslash \

@@ -400,9 +400,9 @@ class AsmTypesLabel:
 
     def __str__(self):
         if len(self._used_at_addresses) > 0:
-            return f'Label({self.name} -> {self._address}, used @ {self._used_at_addresses})'
+            return f'Label({self.name} -> {self._address:x}, used @ {self._used_at_addresses})'
 
-        return f'Label({self.name} -> {self._address})'
+        return f'Label({self.name} -> {self._address:x})'
 
 
 class AsmTableLabels:
@@ -428,6 +428,13 @@ class AsmTableLabels:
 
         self.labels.append(AsmTypesLabel(name, None))
         return self.labels[-1]
+
+    def __contains__(self, item):
+        for idx, label in enumerate(self.labels):
+            if item == label.name:
+                return True
+
+        return False
 
     def fully_finalized(self) -> bool:
         for label in self.labels:
@@ -463,7 +470,10 @@ class Assembler:
         self.labels.printout()
         print(f'Label finalization: {self.labels.fully_finalized()}')
 
+        print('\npass 2\n')
         self.pass2()
+        print()
+        self.pretty_printout()
 
     def pass1(self):
         pc = 0
@@ -526,7 +536,7 @@ class Assembler:
     def pretty_printout(self):
         for address in range(0, 2**15, 16):
             snippet = self.intermediate_code[address:address+15]
-            if any([True for x in snippet if x is not None]):
+            if any([True for x in snippet if x is not None and x != 0]):
                 snippet_str = ''
                 ascii_repr = ''
 
@@ -549,7 +559,28 @@ class Assembler:
                 print(f'{address:0>4x}\t{snippet_str}\t[{ascii_repr}]')
 
     def pass2(self):
-        pass
+        if not self.labels.fully_finalized():
+            # TODO: more info for debugging
+            raise Exception(f'Not all labels have been finalized!')
+
+        for addr, byte in enumerate(self.intermediate_code):
+            if byte is None:
+                self.intermediate_code[addr] = self.DEFAULT_PADDING
+                continue
+
+            if type(byte) is int:
+                continue
+
+            # must be a pointer
+            name, modifier = byte.split('#', 2)
+            address = self.labels[name].address
+            if modifier == 'L':
+                address = address & 0xFF
+            elif modifier == 'H':
+                address = address >> 8 & 0xFF
+
+            print(f'{self.labels[name]}, {modifier} -> {address:x}')
+            self.intermediate_code[addr] = address
 
 
 def csv_isa_to_json(csv_filename: str | None = None, json_filename: str | None = None,
