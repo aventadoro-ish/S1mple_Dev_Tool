@@ -523,15 +523,15 @@ class Assembler:
         pc = 0
 
         for line in AsmLineIterator(self.input_text):
-            if line.type_ in (LineType.EMPTY, LineType.COMMENT):
+            if line.type in (LineType.EMPTY, LineType.COMMENT):
                 continue
 
-            if line.type_ is LineType.DIRECTIVE:
+            if line.type is LineType.DIRECTIVE:
                 if line.subtype is AsmDirectives.ORG:
                     pc = int(line.tokens[1], 16)
                     print(f'.org directive: {pc=}')
 
-            elif line.type_ is LineType.INSTRUCTION:
+            elif line.type is LineType.INSTRUCTION:
                 code = line.memory_snippet
 
                 for byte in code[1:]:
@@ -546,14 +546,14 @@ class Assembler:
 
                 print(f'{line.get_non_comment_tokens()} -> {code}')
 
-            elif line.type_ is LineType.DATA:
+            elif line.type is LineType.DATA:
                 snip = line.memory_snippet
                 self._protected_intermediate_modification_(pc, snip)
                 pc += len(snip)
 
                 print(f'data: {snip} of length {len(snip)}, new {pc=}')
 
-            elif line.type_ is LineType.LABEL:
+            elif line.type is LineType.LABEL:
                 label = AsmTypesLabel.from_line(line, pc)
                 self.labels[label.name].address = pc
 
