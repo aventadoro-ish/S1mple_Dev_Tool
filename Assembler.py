@@ -662,8 +662,10 @@ def csv_isa_to_json(csv_filename: str | None = None, json_filename: str | None =
             next(csv_reader, None)  # skip the headers
 
         for row in csv_reader:
-            inst = Instruction(int(row[opcode_col]), row[name_col],
-                               int(row[n_byte_ops_col]), row[special_ops_col])
+            inst = Instruction(
+                int(row[opcode_col]), row[name_col], int(row[n_byte_ops_col]),
+                row[special_ops_col], row[special_ops_col]
+            )
 
             isa.append(inst.to_json())
 

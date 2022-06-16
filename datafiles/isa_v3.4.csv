@@ -21,7 +21,7 @@
 19,Transfer,MOV,transfer AC -> R,0,AC R,,MOV AC R,,10011
 20,Transfer,MOV,transfer PCL -> R,0,PCL R,,MOV PCL R,,10100
 21,Transfer,MOV,transfer PCH -> R,0,PCH R,,MOV PCH R,,10101
-22,Flow control,JSR,"push PCH, PCL to stack; jump tooperands: #H #L",0,,,JSR 0xaeae,,10110
+22,Flow control,JSR,"push PCH, PCL to stack; jump to operands: #H #L",0,,,JSR 0xaeae,,10110
 23,Flow control,JMP,Jump to #H #L (move #H #L into PCH and PCL),2,#H #L,,,,10111
 24,Flow control,RTS,Return from subroutine,0,,,,,11000
 25,Flow control,JPZ,Jump to HL if Zero flag is set,2,#H #L,,,Z,11001
