@@ -547,7 +547,7 @@ class Assembler:
 
     def pretty_printout(self):
         for address in range(0, 2**15, 16):
-            snippet = self.intermediate_code[address:address+15]
+            snippet = self.intermediate_code[address:address+16]
             if any([True for x in snippet if x is not None and x != 0]):
                 snippet_str = ''
                 ascii_repr = ''
