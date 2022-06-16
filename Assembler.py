@@ -179,12 +179,28 @@ class Line:
 
     def get_non_comment_tokens(self) -> list[str]:
         if self.has_comment:
-            # TODO: this won't work with comments like ';comment'
-            n_inst_tokens = self.tokens.index(';')
+            comment_start_idx = self.line.index(';')
+            n_inst_tokens = len(self.line[:comment_start_idx].split())
+
         else:
             n_inst_tokens = len(self.tokens)
 
         return self.tokens[:n_inst_tokens]
+
+    def __repr__(self):
+        if self.type_ is LineType.INSTRUCTION:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' addr_mode={self.addr_mode}, {self.has_comment=})'
+
+        if self.type_ is LineType.DATA:
+            return f'Line("{self.line}", type={self.type_},' \
+                   f' data_type={self.data_type}, {self.has_comment=})'
+
+        if self.type_ is LineType.COMMENT:
+            return f'Line("{self.line}", type={self.type_})'
+
+        return f'Line("{self.line}", type={self.type_},' \
+               f' {self.has_comment=})'
 
     # private
     def _process_(self):
@@ -344,21 +360,6 @@ class Line:
             snippet = [int(x.strip(','), 16) for x in snippet]
 
         return snippet
-
-    def __repr__(self):
-        if self.type_ is LineType.INSTRUCTION:
-            return f'Line("{self.line}", type={self.type_},' \
-                   f' addr_mode={self.addr_mode}, {self.has_comment=})'
-
-        if self.type_ is LineType.DATA:
-            return f'Line("{self.line}", type={self.type_},' \
-                   f' data_type={self.data_type}, {self.has_comment=})'
-
-        if self.type_ is LineType.COMMENT:
-            return f'Line("{self.line}", type={self.type_})'
-
-        return f'Line("{self.line}", type={self.type_},' \
-               f' {self.has_comment=})'
 
 
 class AsmLineIterator:
