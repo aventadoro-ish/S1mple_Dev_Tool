@@ -260,7 +260,6 @@ class Line:
             pattern=self.get_instruction_pattern()
         )
         instruction = self.ISA_[opcode]
-        print(instruction)
         snippet = [instruction.opcode]
 
         for token in self.get_non_comment_tokens()[1:]:
@@ -283,7 +282,6 @@ class Line:
 
                 snippet.append(token)
 
-        print(f'"{instruction.operand_order}", {snippet[1:]}')
         operand_order = instruction.operand_order.split()
         operand_order = [x for x in operand_order if x not in self.ISA_.special_ops]
 
@@ -294,14 +292,6 @@ class Line:
                 continue
 
             snippet[idx+1] = snippet_token.strip('@#$') + order_token
-            print(f'\t{order_token}, {snippet_token} -> {snippet[idx+1]}')
-
-        print(snippet)
-
-        # print(self.get_non_comment_tokens())
-        # snippet = [x for x in self.get_non_comment_tokens() if x not in self.ISA_.special_ops]
-        # snippet[0] = opcode
-        # print(snippet)
 
         return snippet
 
@@ -500,6 +490,8 @@ class Assembler:
 
                 self._protected_intermediate_modification_(pc, code)
                 pc += len(code)
+
+                print(f'{line.get_non_comment_tokens()} -> {code}')
 
             elif line.type_ is LineType.DATA:
                 snip = line.get_data_snippet()
