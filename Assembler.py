@@ -279,9 +279,22 @@ class Line:
                                 f'exceeds max int value of 2 bytes.')
             except ValueError:
                 if token.startswith('@'):
-                    snippet.append(token + '.H')
-                    snippet.append(token + '.L')
-                    continue
+                    snippet.append(token)
+
+                snippet.append(token)
+
+        print(f'"{instruction.operand_order}", {snippet[1:]}')
+        operand_order = instruction.operand_order.split()
+        operand_order = [x for x in operand_order if x not in self.ISA_.special_ops]
+
+        zipped = zip(operand_order, snippet[1:])
+
+        for idx, (order_token, snippet_token) in enumerate(zipped):
+            if type(snippet_token) is int:
+                continue
+
+            snippet[idx+1] = snippet_token.strip('@#$') + order_token
+            print(f'\t{order_token}, {snippet_token} -> {snippet[idx+1]}')
 
         print(snippet)
 
@@ -289,6 +302,21 @@ class Line:
         # snippet = [x for x in self.get_non_comment_tokens() if x not in self.ISA_.special_ops]
         # snippet[0] = opcode
         # print(snippet)
+
+        return snippet
+
+    def get_data_snippet(self) -> list[str | int]:
+        if self.data_type is AsmDataTypes.BYTE:
+            snippet = (int(self.tokens[1], 16),)
+
+        elif self.data_type is AsmDataTypes.STRING:
+            # TODO: string literals support
+            string_ = self.get_string_data()
+            snippet = tuple(string_.encode('ascii'))
+
+        elif self.data_type is AsmDataTypes.BYTE_ARRAY:
+            snippet = self.get_non_comment_tokens()[1:]
+            snippet = [int(x.strip(','), 16) for x in snippet]
 
         return snippet
 
@@ -344,7 +372,7 @@ class AsmLineIterator:
 class AsmTypesLabel:
     name: str
     _address: int
-    used_at_addresses: list[int] = field(default_factory=list)
+    _used_at_addresses: list[int] = field(default_factory=list)
     _is_finalized: bool = False
 
     @property
@@ -359,6 +387,15 @@ class AsmTypesLabel:
             self._is_finalized = True
 
     @property
+    def used_at(self):
+        return self._used_at_addresses
+
+    @used_at.setter
+    def used_at(self, addr):
+        if addr not in self._used_at_addresses:
+            self._used_at_addresses.append(addr)
+
+    @property
     def is_finalized(self):
         return self._is_finalized
 
@@ -368,8 +405,8 @@ class AsmTypesLabel:
         return AsmTypesLabel(name, address)
 
     def __str__(self):
-        if len(self.used_at_addresses) > 0:
-            return f'Label({self.name} -> {self._address}, used @ {self.used_at_addresses})'
+        if len(self._used_at_addresses) > 0:
+            return f'Label({self.name} -> {self._address}, used @ {self._used_at_addresses})'
 
         return f'Label({self.name} -> {self._address})'
 
@@ -458,33 +495,18 @@ class Assembler:
                         continue
 
                     # treat as pointer
-                    name = byte.strip('@#$').replace('.H', '').replace('.L', '')
-                    self.labels[name].used_at_addresses.append(pc)
+                    name = byte.replace('#H', '').replace('#L', '')
+                    self.labels[name].used_at = pc  # TODO: this feels awkward
 
                 self._protected_intermediate_modification_(pc, code)
                 pc += len(code)
 
             elif line.type_ is LineType.DATA:
-                if line.data_type is AsmDataTypes.BYTE:
-                    snippet = (int(line.tokens[1], 16), )
+                snip = line.get_data_snippet()
+                self._protected_intermediate_modification_(pc, snip)
+                pc += len(snip)
 
-                elif line.data_type is AsmDataTypes.STRING:
-                    # TODO: string literals support
-                    string_ = line.get_string_data()
-                    snippet = string_.encode('ascii')
-                    print(snippet)
-
-                elif line.data_type is AsmDataTypes.BYTE_ARRAY:
-                    snippet = line.get_non_comment_tokens()[1:]
-                    snippet = [int(x.strip(','), 16) for x in snippet]
-
-                self._protected_intermediate_modification_(pc, snippet)
-
-                data_len = self._get_data_len(line)
-                pc += data_len
-
-                print(f'data line: {line.line} of length '
-                      f'{data_len}, new {pc=}')
+                print(f'data: {snip} of length {len(snip)}, new {pc=}')
 
             elif line.type_ is LineType.LABEL:
                 label = AsmTypesLabel.from_line(line, pc)
