@@ -509,19 +509,6 @@ class Assembler:
 
             print()
 
-    @staticmethod
-    def _get_data_len(line: Line) -> int:
-        if line.data_type is AsmDataTypes.BYTE:
-            return 1
-
-        if line.data_type is AsmDataTypes.STRING:
-            # TODO: string literals support
-            # + 1 is a Null-terminator
-            return len(line.get_string_data())
-
-        if line.data_type is AsmDataTypes.BYTE_ARRAY:
-            return len(line.get_non_comment_tokens()) - 1
-
     def _protected_intermediate_modification_(self,
                                               start_addr: int,
                                               insert_list: list[int | str | None]):
