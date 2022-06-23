@@ -48,9 +48,11 @@ class Watch:
 def for_all_methods(decorator):
     def decorate(cls):
         for attr in cls.__dict__:   # there's propably a better way to do this
-            if callable(getattr(cls, attr)) and attr != "__init__":
+            # if callable(getattr(cls, attr)) and attr != "__init__":
+            if attr in ('get', 'set', 'inc', 'dec', 'reset'):
                 # print(f'*adding decorator to {attr}')
                 setattr(cls, attr, decorator(getattr(cls, attr)))
+
         return cls
     return decorate
 
@@ -111,9 +113,14 @@ class Register:
         self.value -= 1
 
 
-def memory_comp_watch(func):
+def memory_watch(func):
     def inner(self, *args, **kwargs):
-        func(self, *args, **kwargs)
+        addr = args[0]
+        if self.is_watched(addr):
+            name = f'{self.comp_at_addr(addr)}[{addr}]'
+            Watch.message(name, func.__name__, )
+
+        return func(self, *args, **kwargs)
 
     return inner
 
@@ -140,23 +147,48 @@ class MemoryComponent:
 
         self.values[idx] = value
 
+    def get(self, addr: int) -> int:
+        return self[addr]
 
+    def set(self, addr: int, value: int):
+        self[addr] = value
+
+
+@for_all_methods(memory_watch)
 class Memory:
-    def __init__(self, watch_addresses: tuple(int)):
+    def __init__(self, watch_addresses: tuple[range]):
         self.watch_addresses = watch_addresses
-        self.components: list[MemoryComponent]
+        self.components: list[MemoryComponent] = []
 
     def add_component(self, comp: MemoryComponent):
-        # TODO: I stopped here
-        pass
+        self.components.append(comp)
 
+    def is_watched(self, addr: int) -> bool:
+        for watch_range in self.watch_addresses:
+            if addr in watch_range:
+                return  True
+
+        return False
+
+    def comp_at_addr(self, addr: int) -> MemoryComponent:
+        for comp in self.components:
+            if addr in comp.range_:
+                return comp
+        else:
+            raise IndexError(f'Address {addr} is not assigned to a memory component.')
+
+    def get(self, addr) -> int:
+        for comp in self.components:
+            if addr in comp.range_:
+                return comp.get(addr)
+        else:
+            raise IndexError(f'Address {addr} is not assigned to a memory component.')
 
 
 if __name__ == '__main__':
     # testing
     reg_a = Register("A", max_value=255, is_watched=True)
     reg_b = Register("B", max_value=255, is_watched=True)
-
     reg_a.set(13)
     reg_b.set(55)
     Watch.tick()
@@ -164,12 +196,14 @@ if __name__ == '__main__':
     reg_a.set(reg_b.get())
     Watch.tick()
 
-    mem = MemoryComponent('ram', range(0, 0x7fff))
-    mem[0x23ff] = 3
-    mem[0x22ff] = 4
-    mem[0x21ff] = 5
+    comp_a = MemoryComponent('ram', range(0, 0x7fff))
+    mem = Memory((range(0, 0x3fff), ))
 
-    print(f'{mem[0x23ff]}')
+    mem.add_component(comp_a)
+
+    print(mem.get(3))
+    print(mem.get(0x4000))
+    # print(mem.get(0x8000))
 
 
 
